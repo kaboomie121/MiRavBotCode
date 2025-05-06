@@ -116,7 +116,7 @@ def update_files(files : list[str]):
             f.write(remote_File)
 
 def checkForUpdate():
-    print("Checking for updates...")
+    print("\nChecking for updates...\n")
     remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
         local_version = get_local_version()
@@ -148,4 +148,4 @@ try:
 except Exception as e:
     print("An \033[31merror\033[0m occured within the main file... Error: code \n", e)
 finally:
-    input("Press any key to exit...")
+    input("\nPress any key to exit...")
