@@ -12,7 +12,7 @@ VERSION_FILENAME = "version.txt"  # The version file
 BOT_FILENAME = "bot.py"  # The script being updated
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__)) +"\\"
 
-GITHUB_API_URL = "https://api.github.com/repos/kaboomie121/test/contents/"
+GITHUB_API_URL = "https://api.github.com/repos/kaboomie121/MiRavBotCode/contents/"
 
 def remove_alternate_newlines(s):
     new_str = ""
@@ -117,7 +117,7 @@ def update_files(files : list[str]):
 
 def checkForUpdate():
     print("Checking for updates...")
-    remote_version = get_localA_version() #get_remote_script()
+    remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
         local_version = get_local_version()
         if remote_version.split('|')[0] != local_version.split('|')[0]:
