@@ -1,0 +1,151 @@
+import os
+import time
+import hashlib
+import requests
+import sys
+import base64
+import subprocess
+
+# GitHub repository details
+CHECK_INTERVAL = 5  # Time in seconds between update checks
+VERSION_FILENAME = "version.txt"  # The version file
+BOT_FILENAME = "bot.py"  # The script being updated
+LOCAL_PATH = os.path.dirname(os.path.abspath(__file__)) +"\\"
+
+GITHUB_API_URL = "https://api.github.com/repos/kaboomie121/test/contents/"
+
+def remove_alternate_newlines(s):
+    new_str = ""
+    newline_count = 0
+    for char in s:
+        if char == '\n':
+            newline_count += 1
+            # Skip every 2nd newline (i.e. even occurrences)
+            if newline_count % 2 == 0:
+                continue
+        new_str += char
+    return new_str
+
+def get_local_script(fileName : str):
+    if not os.path.exists(LOCAL_PATH + fileName):
+        return "" 
+    with open(LOCAL_PATH + "A" + fileName, "r", encoding="utf-8") as f:
+        return (f.read().replace('\r', ''))
+
+def get_remote_script(fileName : str):
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+
+    response = requests.get(GITHUB_API_URL + fileName, headers=headers)
+    if response.status_code == 200:
+        json_response = response.json()
+        if "content" in json_response:
+            returnContent = base64.b64decode(json_response["content"]).decode("utf-8")
+
+            returnContent = returnContent.replace('\r', '')
+
+            return returnContent
+        else:
+            print("\033[31mError:\033[0m No content field in GitHub response.")
+    else:
+        print("\033[31mFailed\033[0m to fetch the bot script. Status code:", response.status_code)
+    return None
+
+def get_local_version():
+    if not os.path.exists(LOCAL_PATH + VERSION_FILENAME):
+        return ""  # If bot.py doesn't exist yet, treat it as an empty file
+    with open(LOCAL_PATH + VERSION_FILENAME, "r", encoding="utf-8") as f:
+        return remove_alternate_newlines(f.read().replace('\r', ''))
+    
+def get_localA_version():
+    if not os.path.exists(LOCAL_PATH + "A" + VERSION_FILENAME):
+        return ""  # If bot.py doesn't exist yet, treat it as an empty file
+    with open(LOCAL_PATH +"A" + VERSION_FILENAME, "r", encoding="utf-8") as f:
+        return (f.read())
+
+def hash_content(content):
+    return hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+class ProcessManager:
+    def __init__(self):
+        self.process = None
+
+    def pollerrors(self):
+        if self.process and not(self.process.poll() is None):
+            output = self.process.stderr.read().decode()
+            print("Bot \033[31mthrew an error\033[0m. Error:\n", output)
+
+    def start(self):
+        started = False
+        while not started:
+            try:
+                self.process = subprocess.Popen([sys.executable, LOCAL_PATH + BOT_FILENAME], stderr=subprocess.PIPE)
+                time.sleep(2)
+                if self.process.poll() is None:
+                    print("Bot sub-process started \033[32msuccessfully!\033[0m")
+                    started = True
+                else:
+                    output = self.process.stderr.read().decode()
+                    print("Bot \033[31mfailed\033[0m to start. Error:\n", output)
+                    started = False
+
+            except Exception as e:
+                print("\033[31mMAJOR ERROR\033[0m Try catch in start function has been called. Reason:\n", e)
+                started = False
+            if not started:
+                print("Retrying in 10 seconds...")
+                time.sleep(10)
+                
+                if checkForUpdate():
+                    botManager.stop()
+                    botManager.start()
+                
+
+    def stop(self):
+        if not(self.process == None):
+            self.process.kill()
+        self.process = None
+
+def update_files(files : list[str]):
+    files.append("version.txt")
+
+    print("Updating all files!")
+    for fileName in files:
+        print(f"\033[33mUpdating\033[0m file: {fileName}\n")
+        remote_File = get_remote_script(fileName)
+        with open(LOCAL_PATH + fileName, "w", encoding="utf-8") as f:
+            f.write(remote_File)
+
+def checkForUpdate():
+    print("Checking for updates...")
+    remote_version = get_localA_version() #get_remote_script()
+    if remote_version:
+        local_version = get_local_version()
+        if remote_version.split('|')[0] != local_version.split('|')[0]:
+            print(f"\033[32mUpdate found!\033[0m Updating bot script to new version: {remote_version.split('|')[0]}")
+            update_files( (remote_version.split('|')[1]).split(';') )
+            return True
+        else:
+            print("\033[33mNo\033[0m updates found.")
+            return False
+
+botManager = ProcessManager()
+def main():
+    checkForUpdate()
+    botManager.start()
+
+    while True:
+        for i in range(10):
+            time.sleep(CHECK_INTERVAL/10)
+            botManager.pollerrors()
+
+        if checkForUpdate():
+            botManager.stop()
+            botManager.start()
+
+
+try:
+    main()
+except Exception as e:
+    print("An \033[31merror\033[0m occured within the main file... Error: code \n", e)
+finally:
+    input("Press any key to exit...")
