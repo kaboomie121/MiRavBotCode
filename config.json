@@ -1,5 +1,5 @@
 {
-    "devMode": true,
+    "devMode": false,
     
     "discordGuild": 1194494035189051472,
     "testDiscordGuild" : 1292920930686861433,

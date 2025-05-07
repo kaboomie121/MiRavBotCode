@@ -585,11 +585,11 @@ async def hostsquadronbattle(ctx : discord.Interaction, battlerating : str, hour
     messageID = (await ctx.channel.send('<@&1338270607220932639>', embed=embed, view=myView)).id
     myView.id = today.timestamp()
     client.add_view(view=myView, message_id=messageID)
-        
+
 @client.tree.command(description="Testing")
 async def test(ctx):
     if not isDevBot:
-        await ctx.channel.send(f'{hostUser}!')
+        await ctx.channel.send(f'This is a test command for testing!')
         return
     # devbot test code
     guild = client.get_guild(TESTDISCORDGUILD)
@@ -688,9 +688,25 @@ async def stats(message):
 
     await message.response.send_message(text)
 
+@tasks.loop(hours=12)
+async def task_check_join_date():
+    guild = client.get_guild(TESTDISCORDGUILD)
+    guildmembers = guild.members
+    today = datetime.today()
+    oneyearago = today
+    oneyearago.replace(year=oneyearago.year-1)
+
+    for guildmember in guildmembers:
+        if guildmember.joined_at.timestamp()-oneyearago.timestamp() > 0:
+            print(f"{guildmember.name} is in here for a year")
+        else:
+            print(f"{guildmember.name} is NOT in here for a year")
+
+
 @tasks.loop(hours=6)
 async def task_write_squadron_highest_SQBrating():
-    print(f'{datetime.now} | Running "task_write_squadron_highest_SQBrating", 6h have passed.')
+    print(f'{datetime.now()} | Running "task_write_squadron_highest_SQBrating", 6h have passed.')
+
     squadronPlayers = await get_squadron_players()
 
     for _number_, personData in squadronPlayers.items():
@@ -699,6 +715,8 @@ async def task_write_squadron_highest_SQBrating():
         message, squadronRating = await getData(str(personData[0]), "HighestSquadronRating")
         if squadronRating == None or int(squadronRating) < int(personData[1]):
             await writedata(personData[0], "HighestSquadronRating", personData[1])
+
+    print(f'{datetime.now()} | Task "task_write_squadron_highest_SQBrating" done')
 
 @client.event
 async def on_ready():
@@ -713,7 +731,6 @@ async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="MiRav Discord", url="https://youtu.be/0-cyS4inY_c"))
     print(f'We have logged in as {client.user}')
 
-    print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
 
 
 print(f'Starting')
