@@ -13,6 +13,7 @@ BOT_FILENAME = "bot.py"  # The script being updated
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__)) +"\\"
 
 GITHUB_API_URL = "https://api.github.com/repos/kaboomie121/MiRavBotCode/contents/"
+GITHUB_API_BACKUP_URL = "https://raw.githubusercontent.com/kaboomie121/MiRavBotCode/refs/heads/master/"
 
 def remove_alternate_newlines(s):
     new_str = ""
@@ -46,8 +47,12 @@ def get_remote_script(fileName : str):
             return returnContent
         else:
             print("\033[31mError:\033[0m No content field in GitHub response.")
+    elif int(response.status_code) == int(403):
+        print("\033[31mFailed\033[0m to fetch the bot script. Status code:", response.status_code, " Error reason: TIMED OUT BY GITHUB")
     else:
         print("\033[31mFailed\033[0m to fetch the bot script. Status code:", response.status_code)
+            
+
     return None
 
 def get_local_version():
@@ -89,7 +94,7 @@ class ProcessManager:
                     started = False
 
             except Exception as e:
-                print("\033[31mMAJOR ERROR\033[0m Try catch in start function has been called. Reason:\n", e)
+                print("\033[31mERROR\033[0m Try catch in start function has been called. Reason:\n", e)
                 started = False
             if not started:
                 print("Retrying in 10 seconds...")
@@ -113,32 +118,47 @@ def update_files(files : list[str]):
         print(f"\033[33mUpdating\033[0m file: {fileName}\n")
         remote_File = get_remote_script(fileName)
         with open(LOCAL_PATH + fileName, "w", encoding="utf-8") as f:
-            f.write(remote_File)
+            f.write(remote_File.removesuffix('\n'))
 
 def checkForUpdate():
     print("\nChecking for updates...\n")
     remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
         local_version = get_local_version()
-        if remote_version.split('|')[0] != local_version.split('|')[0]:
+        if str(remote_version.split('|')[0]) != str(local_version.split('|')[0]):
             print(f"\033[32mUpdate found!\033[0m Updating bot script to new version: {remote_version.split('|')[0]}")
             update_files( (remote_version.split('|')[1]).split(';') )
-            return True
+            print(remote_version.split('|')[2])
+            return True, (remote_version.split('|')[2].replace('\n', '') == "True")
         else:
             print("\033[33mNo\033[0m updates found.")
-            return False
+            return False, False
+    elif remote_version == None: 
+        print("\033[33mERROR:\033[0m remote_version returned None")
+        return False, False
+    return False, False
 
 botManager = ProcessManager()
 def main():
-    checkForUpdate()
+    update, restartSelf = checkForUpdate()
+    if restartSelf:
+        print("Restarting with updated code...")
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    else:
+        print("Self restart not needed.")
     botManager.start()
 
     while True:
-        for i in range(CHECK_INTERVAL/5):
+        for i in range(int(CHECK_INTERVAL/5)):
             time.sleep(5)
             botManager.pollerrors()
-
-        if checkForUpdate():
+        update, restartSelf = checkForUpdate()
+        if update:
+            if restartSelf:
+                print("Restarting with updated code...")
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            else:
+                print("Self restart not needed.")
             botManager.stop()
             botManager.start()
 
@@ -146,6 +166,10 @@ def main():
 try:
     main()
 except Exception as e:
+    try:
+        botManager.stop()
+    except Exception as e:
+        print("")
     print("An \033[31merror\033[0m occured within the main file... Error: \n", e)
 finally:
     input("\nPress any key to exit...")
