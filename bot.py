@@ -38,7 +38,6 @@ import discord
 from discord import Client, Embed, Interaction, app_commands
 from discord.ext import commands
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
 client = discord.Client(intents=discord.Intents.all())
