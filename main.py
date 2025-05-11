@@ -134,8 +134,8 @@ def main():
     botManager.start()
 
     while True:
-        for i in range(10):
-            time.sleep(CHECK_INTERVAL/10)
+        for i in range(CHECK_INTERVAL/5):
+            time.sleep(5)
             botManager.pollerrors()
 
         if checkForUpdate():
