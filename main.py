@@ -118,7 +118,7 @@ def update_files(files : list[str]):
         print(f"\033[33mUpdating\033[0m file: {fileName}\n")
         remote_File = get_remote_script(fileName)
         with open(LOCAL_PATH + fileName, "w", encoding="utf-8") as f:
-            f.write(remote_File.removesuffix('\n').removesuffix('\n', ''))
+            f.write(remote_File.removesuffix('\n'))
 
 def checkForUpdate():
     print("\nChecking for updates...\n")
