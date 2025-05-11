@@ -12,8 +12,9 @@ from discord.ext import tasks
 import discord.ext
 import discord.ext.commands
 
-config = loads(Path("config.json").read_text())
-token = loads(Path("token.json").read_text())
+base_path = Path(__file__).parent
+config = loads((base_path / "config.json").read_text())
+token = loads((base_path / "token.json").read_text())
 
 isDevBot = config["devMode"]
 hostUser = token["user"]
@@ -730,6 +731,8 @@ async def on_ready():
 
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="MiRav Discord", url="https://youtu.be/0-cyS4inY_c"))
     print(f'We have logged in as {client.user}')
+    
+    print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
 
 
 
