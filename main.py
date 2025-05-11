@@ -7,7 +7,7 @@ import base64
 import subprocess
 
 # GitHub repository details
-CHECK_INTERVAL = 5  # Time in seconds between update checks
+CHECK_INTERVAL = 600  # Time in seconds between update checks
 VERSION_FILENAME = "version.txt"  # The version file
 BOT_FILENAME = "bot.py"  # The script being updated
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__)) +"\\"
@@ -146,6 +146,6 @@ def main():
 try:
     main()
 except Exception as e:
-    print("An \033[31merror\033[0m occured within the main file... Error: code \n", e)
+    print("An \033[31merror\033[0m occured within the main file... Error: \n", e)
 finally:
     input("\nPress any key to exit...")
