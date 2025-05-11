@@ -128,7 +128,6 @@ def checkForUpdate():
         if str(remote_version.split('|')[0]) != str(local_version.split('|')[0]):
             print(f"\033[32mUpdate found!\033[0m Updating bot script to new version: {remote_version.split('|')[0]}")
             update_files( (remote_version.split('|')[1]).split(';') )
-            print(remote_version.split('|')[2])
             return True, (remote_version.split('|')[2].replace('\n', '') == "True")
         else:
             print("\033[33mNo\033[0m updates found.")
