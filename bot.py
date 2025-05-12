@@ -347,7 +347,12 @@ async def squadronbattles(ctx:  discord.Interaction):
 
 @client.tree.command(description="Pong!")
 async def ping(ctx:  discord.Interaction):
-    await ctx.response.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
+    try:
+        await ctx.response.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
+    except discord.InteractionResponded as e:
+        await ctx.channel.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
+
+    
 
 @client.tree.command(description="Verify the users within the discord/squadron.")
 async def verifymembers(ctx:  discord.Interaction):
