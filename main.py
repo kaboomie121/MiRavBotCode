@@ -76,8 +76,10 @@ class ProcessManager:
 
     def pollerrors(self):
         if self.process and not(self.process.poll() is None):
-            output = self.process.stderr.read().decode()
-            print("Bot \033[31mthrew an error\033[0m. Error:\n", output)
+            stderr = self.process.stderr.read().decode()
+            stdout = self.process.stdout.read().decode()
+            print("Bot \033[31mthrew an error\033[0m. Error:\n", stderr)
+            print("Bot \033[32moutput:\033[0m.\n", stdout)
 
     def start(self):
         started = False
@@ -148,8 +150,8 @@ def main():
     botManager.start()
 
     while True:
-        for i in range(int(CHECK_INTERVAL/5)):
-            time.sleep(5)
+        for i in range(int(CHECK_INTERVAL)):
+            time.sleep(1)
             botManager.pollerrors()
         update, restartSelf = checkForUpdate()
         if update:

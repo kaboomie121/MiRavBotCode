@@ -106,6 +106,8 @@ SQUADRONSTAFFID = config["squadronStaffId"]
 COMMUNITYHOST = config["communityHostRoleId"]
 DBCHANNELID = config["DBChannelId"]
 
+timeStarted = datetime.now()
+
 
 async def get_squadron_kickable(personList):
     noticeList = await get_notice_list()
@@ -138,6 +140,8 @@ async def get_squadron_kickable(personList):
     return returnList
 
 async def get_discord_list():
+    if isDevBot:
+        return (client.get_guild(TESTDISCORDGUILD)).members
     guild = client.get_guild(DISCORDGUILD)
     return guild.members
   
@@ -150,6 +154,8 @@ def FindFirstIndex(string, findChar):
 
 # Will return a list of users that are on notice with the pattern [USERNAME, Condition] where if condition, 0 = all normal, 1 = check notes, 2 = Special case
 async def get_notice_list():
+    if isDevBot:
+        return list()
     messages = [message async for message in client.get_channel(NOTICELIST_CHANNEL).history(limit=123)]
     returnList = list()
     for message in messages:
@@ -192,6 +198,56 @@ async def get_notice_list():
 
     return returnList
     
+async def get_exemption_list():
+    _, listExemptions = await getData("Bot", "ExemptionListIGN")
+    
+    if listExemptions == None:
+        listExemptions = ""
+        
+    return listExemptions.split("§§")
+
+@app_commands.guild_only()
+class ExemptionListGroup(app_commands.Group):
+    @app_commands.command(description="Exemption list")
+    async def list(self, ctx : discord.Interaction):
+        listExemptions = await get_exemption_list()
+        
+        endPrint = "The current people whom are exempt from kicks:\n"
+        for exemption in listExemptions:
+            endPrint += exemption + "\n"
+        await ctx.response.send_message(endPrint)
+
+    @app_commands.command(description="Exemption list add")
+    async def add(self, ctx : discord.Interaction, ingameusername : str):
+        listExemptions = await get_exemption_list()
+        if ingameusername.lower() in listExemptions:
+            await ctx.response.send_message(f'"{ingameusername.strip()}" is already in the exemption list, you cannot add the same member twice. Did you mean to use "/exemptions remove {ingameusername}"?', ephemeral=True)
+            return
+        
+        endPrint = ingameusername.lower().strip()
+        for exemption in listExemptions:
+            endPrint += "§§" + exemption
+        await writedata("Bot", "ExemptionListIGN", endPrint)
+        await ctx.response.send_message(f'"{ingameusername.strip()}" has been added to the exemption list.', ephemeral=True)
+            
+    
+    @app_commands.command(description="Exemption list remove")
+    async def remove(self, ctx : discord.Interaction, ingameusername : str):
+        listExemptions = await get_exemption_list()
+        
+        if not(ingameusername.lower().strip() in listExemptions):
+            await ctx.response.send_message(f'Couldn\'t remove "{ingameusername.strip()}" from the permanent exemption list, they\'re not in the list. Did you mean to use "/exemptions add {ingameusername}"?', ephemeral=True)
+            return
+        
+        finalWritePart = ""
+        for username in listExemptions:
+            if not (username == ingameusername.lower().strip()):
+                finalWritePart += "§§"+ username
+
+        await writedata("Bot", "ExemptionListIGN", finalWritePart[2:])
+            
+        await ctx.response.send_message(f'Removed "{ingameusername}" from the permanent exemption list', ephemeral=True)
+
 
 JOIN_DEADLINE = config["joinDeadline"]
 @client.tree.command(description="A list of players who need to be kicked from the ingame squadron")
@@ -206,8 +262,9 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
         await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
         return
     await ctx.response.send_message('Gathering the list for you!', ephemeral=True)
-        
+    
     today = datetime.today()
+    exemptionKickList = await get_exemption_list()
     squadronList = await get_squadron_players()
     kickAble = await get_squadron_kickable(squadronList)
     for numbera, squadronMember in kickAble.items():
@@ -234,7 +291,7 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
             squadronMember[5] = 'Not in discord'
             notInDiscordList[len(notInDiscordList)] = squadronMember
 
-    finalList = notInDiscordList.copy()
+    secondfinalList = notInDiscordList.copy()
     for numbera, squadronMember in kickAble.items():
         found = False
         for numberb, member in notInDiscordList.items():
@@ -244,9 +301,14 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
                 #break list to skip to next user
                 break
         if not found:
+            secondfinalList[len(secondfinalList)] = squadronMember
+    
+    finalList = {}
+    for numbera, squadronMember in secondfinalList.items():
+        if not (squadronMember[0].lower() in exemptionKickList):
             finalList[len(finalList)] = squadronMember
-    
-    
+
+            
     # Convert date strings to datetime objects for sorting
     for key, value in finalList.items():
         value[4] = datetime.strptime(value[4], "%d.%m.%Y")  # Convert date to datetime
@@ -345,12 +407,19 @@ async def squadronbattles(ctx:  discord.Interaction):
 
     await ctx.response.send_message(embed = embed)
 
+@client.tree.command(description="How long has the bot been up?")
+async def uptime(ctx:  discord.Interaction):
+    deltatime = datetime.now() - timeStarted
+    await ctx.response.send_message(f'I\'ve been online since {timeStarted.date()}, which is: \n'+
+                                    f'{deltatime.days} day(s) and\n' +
+                                    f'{deltatime.seconds} seconds aka\n' +
+                                    f'{deltatime.seconds/60} minutes aka\n' +
+                                    f'{deltatime.seconds/60/60} hours ago\n' +
+                                    '')
+
 @client.tree.command(description="Pong!")
 async def ping(ctx:  discord.Interaction):
-    try:
-        await ctx.response.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
-    except discord.InteractionResponded as e:
-        await ctx.channel.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
+    await ctx.response.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
 
     
 
@@ -592,11 +661,24 @@ async def hostsquadronbattle(ctx : discord.Interaction, battlerating : str, hour
     client.add_view(view=myView, message_id=messageID)
 
 @client.tree.command(description="Testing")
-async def test(ctx):
+async def test(ctx : discord.Interaction):
     if not isDevBot:
-        await ctx.channel.send(f'This is a test command for testing!')
+        await ctx.response.send_message(f'This is a test command for testing!')
         return
+    print("Test comamnd called")
     # devbot test code
+    if not client.persistent_views:
+        print("No persistent views registered.")
+    else:
+        print("Persistent Views:")
+        for view in client.persistent_views:
+            print(f"- {view.__class__.__name__} | {view.id} (timeout={view.timeout}, children={len(view.children)})")
+            for child in view.children:
+                print(f"- {child.__class__.__name__} | {child}")
+            print(view.primary)
+            
+
+    return
     guild = client.get_guild(TESTDISCORDGUILD)
     guildmembers = guild.members
     today = datetime.today()
@@ -619,6 +701,24 @@ async def getFullUserData(userkey:str):
         if founduserkey == userkey:
             return message, str(data)
     return None, None
+
+async def getAllDataFromOneKey(datakey:str):
+    dbChannel = client.get_channel(DBCHANNELID)
+    #find first
+    returnList = []
+    async for message in dbChannel.history(limit= None):
+        DBuserkey, userData = message.content.split("|")
+        userData += " "
+        # if userdata is only one ; then check if it's correct and return or continue
+        if userData.count(';') == 1:
+            if userData.split(":")[0] in datakey:
+                returnList.append([DBuserkey, userData.split(":")[1]])
+            continue
+        # if we have more than 1 then:
+        async for data in (userData.split(";")):
+            if data.split(":")[0] in datakey:
+                returnList.append([DBuserkey, userData.split(":")[1]])
+    return returnList
 
 async def getData(userkey:str, datakey:str):
     dbChannel = client.get_channel(DBCHANNELID)
@@ -660,7 +760,7 @@ async def writedata(userkey:str, datakey:str, data:str):
                 return
         # if didn't find the correct datakey
         await message.edit(content=f"{userkey}|{fullData}{datakey}:{data};")
-
+ 
 @client.tree.command(description="statistics such as total utc per type!")
 async def stats(message):
     # Get the list of discord members
@@ -735,10 +835,15 @@ async def on_ready():
 
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="MiRav Discord", url="https://youtu.be/0-cyS4inY_c"))
     print(f'We have logged in as {client.user}')
-    
-    print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
+    timeStarted = datetime.now()    
 
 
+    #print(f'Task "{(task_end_old_events.start()).get_name()}" is running...')
+    if not isDevBot:
+        print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
+
+
+client.tree.add_command(ExemptionListGroup(name="exemptions", description="Exemptions list"))
 
 print(f'Starting')
 client.run(TOKEN)
