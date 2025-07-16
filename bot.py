@@ -209,7 +209,11 @@ async def get_exemption_list():
 @app_commands.guild_only()
 class ExemptionListGroup(app_commands.Group):
     @app_commands.command(description="Exemption list")
+    @commands.has_role(SQUADRONSTAFFID)
     async def list(self, ctx : discord.Interaction):
+        if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
+            await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+            return
         listExemptions = await get_exemption_list()
         
         endPrint = "The current people whom are exempt from kicks:\n"
@@ -217,8 +221,12 @@ class ExemptionListGroup(app_commands.Group):
             endPrint += exemption + "\n"
         await ctx.response.send_message(endPrint)
 
+    @commands.has_role(SQUADRONSTAFFID)
     @app_commands.command(description="Exemption list add")
     async def add(self, ctx : discord.Interaction, ingameusername : str):
+        if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
+            await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+            return
         listExemptions = await get_exemption_list()
         if ingameusername.lower() in listExemptions:
             await ctx.response.send_message(f'"{ingameusername.strip()}" is already in the exemption list, you cannot add the same member twice. Did you mean to use "/exemptions remove {ingameusername}"?', ephemeral=True)
@@ -232,7 +240,11 @@ class ExemptionListGroup(app_commands.Group):
             
     
     @app_commands.command(description="Exemption list remove")
+    @commands.has_role(SQUADRONSTAFFID)
     async def remove(self, ctx : discord.Interaction, ingameusername : str):
+        if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
+            await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+            return
         listExemptions = await get_exemption_list()
         
         if not(ingameusername.lower().strip() in listExemptions):
