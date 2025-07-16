@@ -410,11 +410,11 @@ async def squadronbattles(ctx:  discord.Interaction):
 @client.tree.command(description="How long has the bot been up?")
 async def uptime(ctx:  discord.Interaction):
     deltatime = datetime.now() - timeStarted
-    await ctx.response.send_message(f'I\'ve been online since {timeStarted.date()}, which is: \n'+
+    await ctx.response.send_message(f'I\'ve been online since {timeStarted.date().day}/{timeStarted.date().month}/{timeStarted.date().year} at {timeStarted.time().hour}:{timeStarted.time().minute}, which is: \n'+
                                     f'{deltatime.days} day(s) and\n' +
-                                    f'{deltatime.seconds} seconds aka\n' +
-                                    f'{deltatime.seconds/60} minutes aka\n' +
-                                    f'{deltatime.seconds/60/60} hours ago\n' +
+                                    f'{deltatime.seconds:.0f} seconds aka\n' +
+                                    f'{deltatime.seconds/60:.1f} minutes aka\n' +
+                                    f'{deltatime.seconds/60/60:.2f} hours ago\n' +
                                     '')
 
 @client.tree.command(description="Pong!")
