@@ -158,6 +158,7 @@ def main():
         if update:
             if restartSelf:
                 print("Restarting with updated code...")
+                botManager.stop()
                 os.execv(sys.executable, [sys.executable] + sys.argv)
             else:
                 print("Self restart not needed.")
