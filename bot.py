@@ -163,12 +163,13 @@ async def get_notice_list():
         name = ''
         for text in messageSplit[0].split()[1:]:
             name += text + ' '
-        # Two dates
         today = round(datetime.now().timestamp()-1)
+        # no dates
         if FindFirstIndex(messageSplit[2], '<') == -1:
             # Alert to check list
             returnList.append([name.strip().replace(' ', '').lower(), 2])
-        elif messageSplit[2][0].lower() == 'w':
+        # Two dates
+        elif messageSplit[2].count('<') == 2:
             index = FindFirstIndex(messageSplit[2], '<') +3
             secondIndex = FindFirstIndex(messageSplit[2], '>')-2
             # if it is in the future, skip and don't alert as he's not needed yet
@@ -183,7 +184,7 @@ async def get_notice_list():
                 continue
             returnList.append([name.strip().replace(' ', '').lower(), 0])
         # One dates
-        elif messageSplit[2][0].lower() == 'd':
+        elif messageSplit[2].count('<') == 1:
             index = FindFirstIndex(messageSplit[2], '<')+3
             secondIndex = FindFirstIndex(messageSplit[2], '>')-2
             # if end date is in the future, add
