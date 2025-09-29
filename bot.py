@@ -692,6 +692,9 @@ class EventGroup(app_commands.Group):
     app_commands.Choice(name='Both pings', value=2)
     ])
     async def host(self, ctx : discord.Interaction, title : str, hour : int, minute : int, description : str = "", maxmainattendees : int = -1, hasreservelist : bool = False, whotoping : app_commands.Choice[int] = 0):
+        if not(isDevBot) and ((ctx.user.get_role(SQUADRONSTAFFID) == None and ctx.user.get_role(COMMUNITYHOST) == None) and not(ctx.user.id == 259644962876948480 or ctx.user.id == 490216540331966485)):
+            await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
+            return
         if maxmainattendees < 1 and maxmainattendees != -1:
             await ctx.response.send_message(content='❌ You cannot have less than 1 main attendee! Leave empty or type -1 if infinite', ephemeral=True)
             return
@@ -767,6 +770,9 @@ class EventGroup(app_commands.Group):
 
     @app_commands.command(description="A command to host SQB at a specified BR and hour")
     async def stop(self, ctx : discord.Interaction, messageid : str = None):
+        if not(isDevBot) and ((ctx.user.get_role(SQUADRONSTAFFID) == None and ctx.user.get_role(COMMUNITYHOST) == None) and not(ctx.user.id == 259644962876948480 or ctx.user.id == 490216540331966485)):
+            await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
+            return
         viewAmount = 0
         for view in client.persistent_views:
             viewAmount += 1
@@ -831,6 +837,9 @@ class EventGroup(app_commands.Group):
 
     @app_commands.command(description="A command to host SQB at a specified BR and hour")
     async def delay(self, ctx : discord.Interaction, minutes : int = 0, hours : int = 0, messageid : str = None):
+        if not(isDevBot) and ((ctx.user.get_role(SQUADRONSTAFFID) == None and ctx.user.get_role(COMMUNITYHOST) == None) and not(ctx.user.id == 259644962876948480 or ctx.user.id == 490216540331966485)):
+            await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
+            return
         viewAmount = 0
         for view in client.persistent_views:
             viewAmount += 1
