@@ -553,7 +553,7 @@ async def WriteAttendanceLists(self, embed, printReserveList):
 class EventView(discord.ui.View):
     def __init__(self, embed : Embed, host, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
                  primaryList = None, reserveList = None):
-            super().__init__(timeout=None)
+        super().__init__(timeout=None)
 
         if primaryList != None:
             self.primary = primaryList
@@ -604,7 +604,7 @@ class EventView(discord.ui.View):
             await self.message.edit(view=self, embed=self.embed, content=newcontent)
     
     async def start(self):
-            await self.message.edit(view=self, embed=self.embed, content="Event started! ||<@&1338270607220932639>||")
+        await self.message.edit(view=self, embed=self.embed, content="Event started! ||<@&1338270607220932639>||")
 
     async def stop(self):
         for item in self.children:
@@ -620,66 +620,66 @@ class EventView(discord.ui.View):
         @discord.ui.button(label="Attend", style=discord.ButtonStyle.green, custom_id="primarybutton")
         async def button_primary(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.squadronmembersonly and not isDevBot and (interaction.user.get_role(SQUADRONMEMBERROLEID) == None or interaction.user.nick.find('[') == -1):
-                await interaction.response.send_message("⚠️ You are not a squadron member! Become one by applying in <#1303841412684447805>", ephemeral=True)
-                return
-            
-            if interaction.user in self.primary:
-                self.primary.pop(self.primary.index(interaction.user))
-                await interaction.response.send_message("❌ You are no longer attending.", ephemeral=True)
-            else:
+            await interaction.response.send_message("⚠️ You are not a squadron member! Become one by applying in <#1303841412684447805>", ephemeral=True)
+            return
+        
+        if interaction.user in self.primary:
+            self.primary.pop(self.primary.index(interaction.user))
+            await interaction.response.send_message("❌ You are no longer attending.", ephemeral=True)
+        else:
             if len(self.primary) >= self.maxmembers and not (self.maxmembers == -1):
-                    if interaction.user in self.reserve:
-                        await interaction.response.send_message("❌ Primary list is full! You cannot switch to primary!", ephemeral=True)
-                        return
+                if interaction.user in self.reserve:
+                    await interaction.response.send_message("❌ Primary list is full! You cannot switch to primary!", ephemeral=True)
+                    return
                 if self.twolistsystem:
                     self.reserve.append(interaction.user)
                     await interaction.response.send_message("✅ Primary list full! You're now attending as reserve!", ephemeral=True)
                 else:
                     await interaction.response.send_message("❌ The event is full! You can not attend!", ephemeral=True)
-                    
-                await WriteAttendanceLists(self, self.embed, self.twolistsystem)
-                await interaction.message.edit(embed=self.embed)
-                    return
-                # people can still attend!
-                if interaction.user in self.reserve:
-                    self.reserve.pop(self.reserve.index(interaction.user))
-                    self.primary.append(interaction.user)
-                    
-                    
-                await WriteAttendanceLists(self, self.embed, self.twolistsystem)
-                await interaction.message.edit(embed=self.embed)
-                    await interaction.response.send_message("✅ You have switched to primary.", ephemeral=True)
-                    return
 
+                await WriteAttendanceLists(self, self.embed, self.twolistsystem)
+                await interaction.message.edit(embed=self.embed)
+                return
+            # people can still attend!
+            if interaction.user in self.reserve:
+                self.reserve.pop(self.reserve.index(interaction.user))
                 self.primary.append(interaction.user)
-                await interaction.response.send_message("✅ You're now attending!", ephemeral=True)
-            
+                
+                
+                await WriteAttendanceLists(self, self.embed, self.twolistsystem)
+                await interaction.message.edit(embed=self.embed)
+                await interaction.response.send_message("✅ You have switched to primary.", ephemeral=True)
+                return
+
+            self.primary.append(interaction.user)
+            await interaction.response.send_message("✅ You're now attending!", ephemeral=True)
+        
         await WriteAttendanceLists(self, self.embed, self.twolistsystem)
         await interaction.message.edit(embed=self.embed)
 
-        @discord.ui.button(label="Attend as reserve", style=discord.ButtonStyle.blurple, custom_id="reservebutton")
-        async def button_reserve(self, interaction: discord.Interaction, button: discord.ui.Button):
-            if not isDevBot and (interaction.user.get_role(SQUADRONMEMBERROLEID) == None or interaction.user.nick.find('[') == -1):
-                await interaction.response.send_message("⚠️ You are not a squadron member! Become one by applying in <#1303841412684447805>", ephemeral=True)
-                return
-              
-            if interaction.user in self.primary:
-                self.primary.pop(self.primary.index(interaction.user))
-                self.reserve.append(interaction.user)
-                
+    @discord.ui.button(label="Attend as reserve", style=discord.ButtonStyle.blurple, custom_id="reservebutton")
+    async def button_reserve(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isDevBot and (interaction.user.get_role(SQUADRONMEMBERROLEID) == None or interaction.user.nick.find('[') == -1):
+            await interaction.response.send_message("⚠️ You are not a squadron member! Become one by applying in <#1303841412684447805>", ephemeral=True)
+            return
+        
+        if interaction.user in self.primary:
+            self.primary.pop(self.primary.index(interaction.user))
+            self.reserve.append(interaction.user)
+            
             await WriteAttendanceLists(self, self.embed, self.twolistsystem)
             await interaction.message.edit(embed=self.embed)
-                await interaction.response.send_message("✅ You have switched to reserve.", ephemeral=True)
-                return
+            await interaction.response.send_message("✅ You have switched to reserve.", ephemeral=True)
+            return
 
-            if interaction.user in self.reserve:
-                self.reserve.pop(self.reserve.index(interaction.user))
-                await interaction.response.send_message("❌ You are no longer attending.", ephemeral=True)
-            else:
-                self.reserve.append(interaction.user)
-                await interaction.response.send_message("✅ You're now attending as reserve!", ephemeral=True)
+        if interaction.user in self.reserve:
+            self.reserve.pop(self.reserve.index(interaction.user))
+            await interaction.response.send_message("❌ You are no longer attending.", ephemeral=True)
+        else:
+            self.reserve.append(interaction.user)
+            await interaction.response.send_message("✅ You're now attending as reserve!", ephemeral=True)
 
-            
+        
         await WriteAttendanceLists(self, self.embed, self.twolistsystem)
         await interaction.message.edit(embed=self.embed)
 
@@ -763,7 +763,7 @@ class EventGroup(app_commands.Group):
 
         myView.message = await ctx.channel.send(whotopingText, embed=embed, view=myView)
         await writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
-    myView.id = today.timestamp()
+        myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
         
