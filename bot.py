@@ -526,8 +526,8 @@ async def checkmembername(ctx :  discord.Interaction, name: str):
 
 
 async def WriteAttendanceLists(self, embed, printReserveList):
-        printedList = ''
-        for user in self.primary:
+    printedList = ''
+    for user in self.primary:
         printedList += f'{str(user.nick).split('[')[0]} | <@{user.id}>\n'
     
     maxMembers = ""
