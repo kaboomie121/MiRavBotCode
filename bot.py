@@ -535,9 +535,9 @@ async def WriteAttendanceLists(self, embed, printReserveList):
     if self.maxmembers != -1:
         maxMembers = f" (max {self.maxmembers})"
 
-        if len(self.primary) == 1:
+    if len(self.primary) == 1:
         embed.set_field_at(0, name=f'1 Attendee{maxMembers}:', value=printedList, inline=True)
-        else:
+    else:
         embed.set_field_at(0, name=f'{len(self.primary)} Attendees{maxMembers}:', value=printedList, inline=True)
 
     if printReserveList:
