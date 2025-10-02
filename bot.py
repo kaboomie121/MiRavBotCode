@@ -1151,7 +1151,7 @@ async def task_end_old_events():
             time_until_event = view.hostdate - datetime.now()
             print(time_until_event)
 
-            if time_until_event < -timedelta(hours=4):
+            if time_until_event < -timedelta(hours=6):
                 print("Ended!")
                 await view.stop()
                 
