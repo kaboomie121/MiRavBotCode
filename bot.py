@@ -1337,7 +1337,7 @@ async def on_ready():
           
     if not isDevBot:
         if not task_write_squadron_highest_SQBrating.is_running():
-        print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
+            print(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
 
 
 client.tree.add_command(EventGroup(name="event", description="Manage events"))
