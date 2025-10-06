@@ -587,7 +587,7 @@ class EventView(discord.ui.View):
         
         self.hostdate = newDate
         await self.message.edit(view=self, embed=self.embed)
-        await self.message.reply(content=f"**{self.embed.title}** delayed to <t:{str(int(self.hostdate.timestamp()))}:t>")
+        await self.message.reply(content=f"**{self.embed.title.replace('*', '')}** delayed to <t:{str(int(self.hostdate.timestamp()))}:t>")
         
 
     async def edit(self, newembed = None, disabled = None, newcontent = None):
