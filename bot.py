@@ -787,7 +787,7 @@ class EventGroup(app_commands.Group):
             allEventNames = ""
             viewAmount = 0
             for view in client.persistent_views:
-                if view.owner == ctx.user:
+                if view.owner.id == ctx.user.id:
                     viewAmount += 1
                     foundEvent = view
                     allEventNames += f'ID: {view.message.id} | HostDate: <t:{int((view.hostdate).timestamp())}:f> | {(view.embed.title).replace('\n', '')}\n'
@@ -801,7 +801,7 @@ class EventGroup(app_commands.Group):
             # End if it exists
             if foundEvent != None:
                 await ctx.edit_original_response(content=f"Found a event with the title \"{(view.embed.title).replace('\n', '')}\"")
-                await view.stop()
+                await foundEvent.stop()
             else:
                 await ctx.edit_original_response(content="You have no events ongoing...!")
         # If a messageID is specified
