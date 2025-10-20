@@ -611,11 +611,15 @@ class EventView(discord.ui.View):
             item.disabled = True
         try:
             await self.message.edit(view=self, embed=self.embed, content="This event has ended")
-            super().stop()
         except:
-            print("⚠️ Something went wrong when deleting an event")
+            print("⚠️ Something went wrong when editing message to an event")
         finally:
-            await removedatakey("OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
+            try:
+                super().stop()
+            except:
+                print("⚠️ Something went wrong when deleting an event")
+            finally:
+                await removedatakey("OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
 
     @discord.ui.button(label="Attend", style=discord.ButtonStyle.green, custom_id="primarybutton")
     async def button_primary(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -786,21 +790,48 @@ class EventGroup(app_commands.Group):
             foundEvent = None
             allEventNames = ""
             viewAmount = 0
+            selectListOptions = []
             for view in client.persistent_views:
                 if view.owner.id == ctx.user.id:
                     viewAmount += 1
                     foundEvent = view
                     allEventNames += f'ID: {view.message.id} | HostDate: <t:{int((view.hostdate).timestamp())}:f> | {(view.embed.title).replace('\n', '')}\n'
+                    selectListOptions.append( discord.SelectOption(value=view.message.id, label=view.embed.title.replace('\n', '').replace('*', ''), description=f"Hosted on {(view.hostdate).ctime()}") )
 
                     
             if viewAmount > 1:
-                await ctx.edit_original_response(content=f"You have multiple ({viewAmount}) events ongoing, specify with a message ID. All current ongoing events:\n{allEventNames}")
+                class StopSelect(discord.ui.Select):
+                    def __init__(self, options):
+                        super().__init__(placeholder="Choose an option...", min_values=1, max_values=1, options=options)
+
+                    async def callback(self, ctx: discord.Interaction):
+                        if self.disabled:
+                            return
+                        self.disabled = True
+                        messageid = self.values[0]
+                        await ctx.response.edit_message(view=None, content=f"Stopping the event with id: {messageid}")
+                        # find event
+                        foundEvent = None
+                        for view in client.persistent_views:
+                            if int(view.message.id) == int(messageid):
+                                foundEvent = view
+                                break
+                                
+                        # end if it exists
+                        if foundEvent != None:
+                            await foundEvent.stop()
+
+                # delay view setup
+                stopView = discord.ui.View(timeout = 300)
+                stopView.add_item(StopSelect(selectListOptions))
+
+                await ctx.edit_original_response(view=stopView, content=f"You have multiple ({viewAmount}) events ongoing, specify with a message ID or select via the menu below. All current ongoing events:\n{allEventNames}")
                 return
 
 
             # End if it exists
             if foundEvent != None:
-                await ctx.edit_original_response(content=f"Found a event with the title \"{(view.embed.title).replace('\n', '')}\"")
+                await ctx.edit_original_response(content=f"Found a event with the title \"{(foundEvent.embed.title).replace('\n', '')}\"")
                 await foundEvent.stop()
             else:
                 await ctx.edit_original_response(content="You have no events ongoing...!")
@@ -818,11 +849,12 @@ class EventGroup(app_commands.Group):
             for view in client.persistent_views:
                 if view.message.id == messageid:
                     foundEvent = view
+                    break
                     
             # end if it exists
             if foundEvent != None:
-                await ctx.edit_original_response(content=f"Stopping a event with the title {(view.embed.title).replace('\n', '')}")
-                await view.stop()
+                await ctx.edit_original_response(content=f"Stopping a event with the title {(foundEvent.embed.title).replace('\n', '')}")
+                await foundEvent.stop()
             else:
                 await ctx.edit_original_response(content=f"There is no event with the ID: {messageid}")
 
