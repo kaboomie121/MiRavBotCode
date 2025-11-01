@@ -35,7 +35,7 @@ from pprint import pprint
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 import discord 
-from discord import Client, Embed, Interaction, app_commands
+from discord import Client, Embed, Interaction, app_commands, ui
 from discord.ext import commands
 import requests
 from datetime import datetime, timedelta
@@ -103,6 +103,8 @@ SECOND_ACTIVITY_REQUIREMENT = config["secondActivityRequirement"]
 EXEMPTION_SQ_RATING = config["exemptionSQRating"]
 
 SQUADRONSTAFFID = config["squadronStaffId"]
+if isDevBot:
+    SQUADRONSTAFFID = 1306031448209363054
 COMMUNITYHOST = config["communityHostRoleId"]
 DBCHANNELID = config["DBChannelId"]
 
@@ -199,6 +201,14 @@ async def get_notice_list():
 
     return returnList
     
+async def get_discord_exemption_list():
+    _, listExemptions = await getData("Bot", "ExemptionListDISCORD")
+    
+    if listExemptions == None:
+        listExemptions = ""
+        
+    return listExemptions.split("§§")
+
 async def get_exemption_list():
     _, listExemptions = await getData("Bot", "ExemptionListIGN")
     
@@ -206,6 +216,28 @@ async def get_exemption_list():
         listExemptions = ""
         
     return listExemptions.split("§§")
+
+
+    
+@client.tree.command(description="Starts the next season!")
+async def nextseason(ctx:  discord.Interaction):
+    if not(ctx.user.id == 259644962876948480):
+        await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+        return
+    await ctx.response.send_message('Next season starting... Transfering data...', ephemeral=False)
+    messages = [message async for message in client.get_channel(DBCHANNELID).history(limit=240)]
+
+    for message in messages:
+        # we check if they have the "HighestSquadronRating" in the message, if so, get the data, set it to 0 and put it in "PreviousSeasonHighestSquadronRating"
+        if message.content.find("HighestSquadronRating") != -1:
+            message, data = await getData(message.content.split("|")[0], "HighestSquadronRating")
+            if data == None:
+                continue
+            await writedata(message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
+            await writedata(message.content.split("|")[0], "HighestSquadronRating", "0")
+    await ctx.response.edit_message(content="All done! Next season started!.")
+ 
+    
 
 @app_commands.guild_only()
 class ExemptionListGroup(app_commands.Group):
@@ -216,15 +248,40 @@ class ExemptionListGroup(app_commands.Group):
             await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
             return
         listExemptions = await get_exemption_list()
+        discordListExemptions = await get_discord_exemption_list()
         
         endPrint = "The current people whom are exempt from kicks:\n"
         for exemption in listExemptions:
             endPrint += exemption + "\n"
+
+        endPrint += "\nDiscord members exempt from kicks:\n"
+        for exemption in discordListExemptions:
+            endPrint += f"<@{exemption}>\n"
+
+        endPrint += f"\nTotal: {len(listExemptions)+ len(discordListExemptions)}"
         await ctx.response.send_message(endPrint)
 
+    #@commands.has_role(SQUADRONSTAFFID)
+    #@app_commands.guild_only()
+    #@app_commands.command(description="Discord exemption list add")
+    #async def discordnameadd(self, ctx : discord.Interaction, discordUser : discord.Member):
+    #    if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
+    #        await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+    #        return
+    #    listExemptions = await get_discord_exemption_list()
+    #    if discordUser.id in listExemptions:
+    #        await ctx.response.send_message(f'"{discordUser.nick.strip()}" is already in the exemption list, you cannot add the same member twice. Did you mean to use "/exemptions remove {discordUser}"?', ephemeral=True)
+    #        return
+    #    
+    #    endPrint = discordUser.id
+    #    for exemption in listExemptions:
+    #        endPrint += "§§" + exemption
+    #    await writedata("Test", "ExemptionListDiscord", endPrint)
+    #    await ctx.response.send_message(f'"{discordUser.nick.strip()}" has been added to the exemption list.', ephemeral=True)
+    
     @commands.has_role(SQUADRONSTAFFID)
-    @app_commands.command(description="Exemption list add")
-    async def add(self, ctx : discord.Interaction, ingameusername : str):
+    @app_commands.command(description="Ingame name exemption list add")
+    async def ingamenameadd(self, ctx : discord.Interaction, ingameusername : str):
         if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
             await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
             return
@@ -434,7 +491,6 @@ async def uptime(ctx:  discord.Interaction):
 async def ping(ctx:  discord.Interaction):
     await ctx.response.send_message(f'{hostUser}: Pong! {client.latency:.4f}s')
 
-    
 
 @client.tree.command(description="Verify the users within the discord/squadron.")
 async def verifymembers(ctx:  discord.Interaction):
@@ -447,25 +503,33 @@ async def verifymembers(ctx:  discord.Interaction):
     usersRemoved = 0
     totalSquadronMembers = 0
     usersNoUTC = 0
-    totalAllies = 0
-    newAllies = 0
+    totalOtherSquadrons = 0
+    totalRepresentingAllies = 0
     discordMembers = await get_discord_list()
+    discordExemptionList = await get_discord_exemption_list()
     squadronMembers = await get_squadron_players()
+    otherSquadronRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1374461613083590667)
     allyRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1346451233543557121)
-    role = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1338270607220932639)
+    memberRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1338270607220932639)
+
     await ctx.response.send_message('Gathered all data... Executing order 66...', ephemeral=True)
     for discordMember in discordMembers:
+        if discordMember.id in discordExemptionList:
+            continue
         if discordMember.bot:
             continue
         found = False
         usersChecked += 1
+        if allyRole in discordMember.roles:
+            totalRepresentingAllies += 1
+            continue
+        elif otherSquadronRole in discordMember.roles:
+            totalOtherSquadrons += 1
+            continue
+
         #if (discordMember.nick != None):
         #    print(discordMember.nick[:discordMember.nick.find('[')].replace(' ', '').strip().lower())
         if (discordMember.nick != None and discordMember.nick.strip()[0] == '['):
-            if not(allyRole in discordMember.roles):
-                await discordMember.add_roles(allyRole)
-                newAllies += 1
-            totalAllies += 1
             continue
         for counterB, squadronMember in squadronMembers.items():
             if (discordMember.nick != None):
@@ -475,11 +539,11 @@ async def verifymembers(ctx:  discord.Interaction):
         
         if found:
             totalSquadronMembers += 1
-        if found and not(role in discordMember.roles):
-            await discordMember.add_roles(role)
+        if found and not(memberRole in discordMember.roles):
+            await discordMember.add_roles(memberRole)
             usersAdded += 1
-        elif not found and (role in discordMember.roles):
-            await discordMember.remove_roles(role)
+        elif not found and (memberRole in discordMember.roles):
+            await discordMember.remove_roles(memberRole)
             usersRemoved += 1
         elif not found and (discordMember.nick == None or discordMember.nick.find('[') == -1):
             usersNoUTC += 1
@@ -490,8 +554,9 @@ async def verifymembers(ctx:  discord.Interaction):
         f'New users: {usersAdded}\n'+
         f'Users removed: {usersRemoved}\n'+
         f'Users with no tags []: {usersNoUTC}\n'+
-        f'Total allies: {totalAllies}\n'+
-        f'New allies: {newAllies}')
+        f'Total representing allies: {totalRepresentingAllies}\n'+
+        f'Total other squadron members: {totalOtherSquadrons}\n'
+        )
 
 @client.tree.command(description="Check if the username is found in the squadron.")
 async def checkmembername(ctx :  discord.Interaction, name: str):
@@ -660,7 +725,7 @@ class EventView(discord.ui.View):
         
         await WriteAttendanceLists(self, self.embed, self.twolistsystem)
         await interaction.message.edit(embed=self.embed)
-
+    
     @discord.ui.button(label="Attend as reserve", style=discord.ButtonStyle.blurple, custom_id="reservebutton")
     async def button_reserve(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not isDevBot and (interaction.user.get_role(SQUADRONMEMBERROLEID) == None or interaction.user.nick.find('[') == -1):
@@ -1116,7 +1181,7 @@ async def removedatakey(userkey:str, datakey:str):
                     if not(dataToAdd == ""):
                         strData += dataToAdd + ";" 
                 await message.edit(content=f"{userkey}|{strData}")
-    
+
 async def writedata(userkey:str, datakey:str, data:str):
     dbChannel = client.get_channel(DBCHANNELID)
     # find first
@@ -1171,6 +1236,69 @@ async def stats(message):
             text += f"UTC {"{0}".format(str(round(utctime, 1) if utctime % 1 else int(utctime)))}: {utcListCounter[utctime]} members\n"
 
     await message.response.send_message(text)
+
+class WTGuessrView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=180)  # 3 minutes timeout
+        self.message = None
+        self.owner = None
+        self.currentImage = None
+        self.currentAnswer = None
+        self.score = 0
+        self.round = 0
+        self.started = False
+        self.starttime = datetime.now()
+    
+    async def start(self):
+        await self.next_round()
+
+    async def next_round(self):
+        if self.round >= 5:
+            await self.message.edit(content=f"Game over! Your final score is {self.score}/5", view=None)
+            await self.stop()
+            return
+        
+        # Fetch a new image and answer
+        self.currentImage, self.currentAnswer = None, None
+        
+        if self.currentImage is None or self.currentAnswer is None:
+            await self.message.edit(content="Error fetching image. Please try again later.", view=None)
+            await self.stop()
+            return
+        
+        embed = discord.Embed(title=f"Warthunder Guessr - Round {self.round + 1}/5", description="Guess the location of the Warthunder screenshot!", color=0x00ff00)
+        embed.set_image(url=self.currentImage)
+        embed.set_footer(text="You have 3 minutes to guess the location!")
+        
+        await self.message.edit(content=None, embed=embed)
+        self.round += 1
+
+    @discord.ui.button(label="Stop", style=discord.ButtonStyle.red, custom_id="guess_location")
+    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.owner:
+            await interaction.response.send_message("Only the game host can use this button.", ephemeral=True)
+            return
+        
+        super().stop()
+        return
+
+
+@client.tree.command(description="WarthunderGuessr!")
+@app_commands.choices(difficulty=[
+    app_commands.Choice(name='Easy', value=0),
+    app_commands.Choice(name='Hard', value=1)
+    ])
+async def warthunderguessr(ctx: discord.Interaction, difficulty: app_commands.Choice[int] = 0):
+    if not isDevBot:
+        await ctx.response.send_message("This command is only available in the dev bot.", ephemeral=True)
+        return
+    await ctx.response.send_message("Starting WarthunderGuessr!", ephemeral=True)
+    view = WTGuessrView()
+    message = await ctx.channel.send("WarthunderGuessr started! You have 3 minutes to guess the location by using the buttons below!", view=view)
+    view.message = message
+    view.owner = ctx.user
+    client.add_view(view=view, message_id=message.id)
+    
 
 # Checks if 6hours have passed since the start of the event, if so, stop the event.
 @tasks.loop(minutes=1)
