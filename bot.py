@@ -788,7 +788,7 @@ class EventGroup(app_commands.Group):
 
         time = ctx.user.nick[ctx.user.nick.find('[')+4:len(ctx.user.nick)-1]
         today = datetime.today()
-        newHour = hour-int(time)+2
+        newHour = hour-int(time)+1
         if (newHour < 0):
             newHour += 24
         elif (newHour > 23):
@@ -1054,7 +1054,7 @@ class EventGroup(app_commands.Group):
 
         time = ctx.user.nick[ctx.user.nick.find('[')+4:len(ctx.user.nick)-1]
         today = datetime.today()
-        newHour = hour-int(time)+2
+        newHour = hour-int(time)+1
         if (newHour < 0):
             newHour += 24
         elif (newHour > 23):
