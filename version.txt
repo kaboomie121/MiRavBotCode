@@ -1,1 +1,1 @@
-1.2.9|bot.py;config.json;main.py|True
+1.2.10|bot.py;config.json;main.py|True
