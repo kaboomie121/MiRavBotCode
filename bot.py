@@ -944,9 +944,9 @@ class EventGroup(app_commands.Group):
             await ctx.response.send_message("Not detecting any ongoing events...", ephemeral=True)
             return
         
-        if (hours < 0 or minutes < 0) and not isDevBot:
-            await ctx.response.send_message("You can't delay the event by negative amount, edit the event instead if this was on purpose.", ephemeral=True)
-            return
+        #if (hours < 0 or minutes < 0) and not isDevBot:
+        #    await ctx.response.send_message("You can't delay the event by negative amount, edit the event instead if this was on purpose.", ephemeral=True)
+        #    return
 
         if messageid == None:
             await ctx.response.send_message("Delaying your event most recent event!", ephemeral=True)
