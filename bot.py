@@ -137,6 +137,7 @@ async def get_squadron_kickable(personList):
             continue
         if (int(personData[1]) < EXEMPTION_SQ_RATING and int(personData[2]) < FIRST_ACTIVITY_REQUIREMENT and -(given_date.date() - today.date()).days >= FIRST_DEADLINE ) or (int(personData[1]) < EXEMPTION_SQ_RATING and int(personData[2]) < SECOND_ACTIVITY_REQUIREMENT and -(given_date.date() - today.date()).days >= SECOND_DEADLINE ) :
             returnList[len(returnList)] = personData
+            print(f'Added {personData[0]} to kickable list.')
     
 
     return returnList
@@ -375,8 +376,41 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
     
     finalList = {}
     for numbera, squadronMember in secondfinalList.items():
+        print(f'Checking exemption for {squadronMember[0]}')
         if not (squadronMember[0].lower() in exemptionKickList):
-            finalList[len(finalList)] = squadronMember
+            print(f'{squadronMember[0]} is not exempt. Type: {squadronMember[5]}')
+            if squadronMember[5] == 'Inactivity':
+                print("Checking sqb points for possible for " + squadronMember[0])
+                # now one last check if he has points
+                message, data = await getFullUserData(squadronMember[0])
+                # if they don't have any userdata, add them
+                if data == None:
+                    finalList[len(finalList)] = squadronMember #
+                    print("Adding " + squadronMember[0] + " to kick list due to no squadron points.")
+                    continue
+
+                hasPointsThisOrLastSeason = False
+                # check if they have previous season points...
+                if data.find("PreviousSeasonHighestSquadronRating") != -1:
+                    print("PreviousSeasonHighestSquadronRating: " + data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1].split(";")[0])
+                    if data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1][0] != "0":
+                        hasPointsThisOrLastSeason = True
+                # check if they have current season points
+                if data.find("HighestSquadronRating") != -1:
+                    print("HighestSquadronRating: " + data[data.find(";HighestSquadronRating"):].split(":")[1].split(";")[0])
+                    if data[data.find("HighestSquadronRating"):].split(":")[1][0] != "0":
+                        hasPointsThisOrLastSeason = True
+
+                # if they have no points in this or last season, add them to the kick list
+                if not hasPointsThisOrLastSeason:
+                    finalList[len(finalList)] = squadronMember #
+                    print("Adding " + squadronMember[0] + " to kick list due to no squadron points.")
+                else:
+                    # they have points!
+                    print(squadronMember[0] + " has points.")
+            else:
+                # Not in Discord or other reasons:
+                finalList[len(finalList)] = squadronMember #
 
             
     # Convert date strings to datetime objects for sorting
@@ -390,7 +424,9 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
     #print(finalSortedList)
     #embed = discord.Embed(title=f"Member number 1", description=f"**{finalSortedList[1][0]}**", color=discord.Color.blue())
     #await message.channel.send(embed=embed, view=MemberView(finalSortedList))
-
+    timeEnd = datetime.today()
+    timeTaken = timeEnd - timeStarted 
+    print(f'Kicklist generated in {timeTaken.total_seconds():.2f} seconds.')
     # change those in notice list to "Notice submitted"        
     printString = f'```ansi\n'
     amountToKick = "ERROR N/A"
@@ -409,12 +445,12 @@ async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
         elif type.value == 2: #Not in discord
             amountToKick = NIDToKick
         
-    printString += f'Users to kick: \u001b[1;31m{amountToKick}\u001b[0m\n'
+    printString += f'Users to kick: \u001b[1;31m{amountToKick}\u001b[0m   Time taken: {timeTaken.total_seconds():.2f} seconds\n'
     printString += f'  Username             | Date joined | Reason\n'
     for number, squadronMember in finalSortedList.items():
         if ((type.value == 1 and squadronMember[5] == 'Not in discord') or (type.value == 2 and squadronMember[5] == 'Inactivity')):
             continue
-        
+        print(f'Preparing kicklist entry for {squadronMember[0]}')
         if squadronMember[5] == 'Not in discord':
             printString += f'- \u001b[33m{squadronMember[0].ljust(20)}\u001b[0m |  \u001b[34m{squadronMember[4].strftime("%d.%m.%Y")}\u001b[0m | \u001b[33m{squadronMember.get(5, "N/A")}\u001b[0m\n'
         elif squadronMember[5] == 'Inactivity':
@@ -1139,7 +1175,7 @@ async def getAllDataFromOneKey(datakey:str):
                 returnList.append([DBuserkey, userData.split(":")[1]])
             continue
         # if we have more than 1 then:
-        async for data in (userData.split(";")):
+        for data in (userData.split(";")):
             if data.split(":")[0] in datakey:
                 returnList.append([DBuserkey, userData.split(":")[1]])
     return returnList
@@ -1157,7 +1193,7 @@ async def getData(userkey:str, datakey:str):
                     return message, str((userData)[:len(userData)-2].split(":")[1])
                 continue
             # if we have more than 1 then:
-            async for data in (userData.split(";")):
+            for data in (userData.split(";")):
                 if data.split(":")[0] == datakey:
                     return message, str(data.split(":")[1])
     return None, None
