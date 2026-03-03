@@ -1,2 +1,5 @@
 token.json
 /.vs
+/helpers/__pycache__
+/extensions/__pycache__
+/logs
