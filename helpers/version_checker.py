@@ -62,14 +62,14 @@ def checkForUpdate():
     print("\nChecking for updates...\n")
     remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
-        print(f"Remote version: {remote_version}")
-        logging.info(f"Remote version: {remote_version}")
-        print(f"Local version: {get_local_version()}")
-        logging.info(f"Local version: {get_local_version()}")
         local_version = get_local_version()
-        if str(remote_version) != str(local_version):
-            logging.info(f"\033[32mUpdate found!\033[0m New version: {remote_version}")
-            print(f"\033[32mUpdate found!\033[0m New version: {remote_version}")
+        print(f"Remote version: {str(remote_version).strip()}")
+        logging.info(f"Remote version: {str(remote_version).strip()}")
+        print(f"Local version: {str(local_version).strip()}")
+        logging.info(f"Local version: {str(local_version).strip()}")
+        if str(remote_version).strip() != str(local_version).strip():
+            logging.info(f"\033[32mUpdate found!\033[0m New version: {str(remote_version).strip()}")
+            print(f"\033[32mUpdate found!\033[0m New version: {str(remote_version).strip()}")
             return True
         else:
             logging.info("\033[33mNo updates found.\033[0m")
