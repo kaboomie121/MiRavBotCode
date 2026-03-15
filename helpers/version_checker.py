@@ -52,6 +52,8 @@ def get_remote_script(fileName : str):
     return None
 
 def get_local_version():
+    logging.info("Getting local version from file: " + LOCAL_PATH + VERSION_FILENAME)
+    print("Getting local version from file: " + LOCAL_PATH + VERSION_FILENAME)
     if not os.path.exists(LOCAL_PATH + VERSION_FILENAME):
         return ""  # If bot.py doesn't exist yet, treat it as an empty file
     with open(LOCAL_PATH + VERSION_FILENAME, "r", encoding="utf-8") as f:
