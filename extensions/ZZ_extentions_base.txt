@@ -1,0 +1,29 @@
+# All normal imports
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from datetime import datetime, timedelta
+from asyncio.windows_events import NULL
+
+# Config imports
+from pathlib import Path
+from json import loads
+
+base_path = Path(__file__).parent
+config = loads((base_path / "../config.json").read_text())
+
+# Import helper functions below
+
+
+
+# Groups
+
+
+
+async def setup(bot : commands.Bot):
+    # Add groups of code
+    bot.tree.add_command(CHANGE_THIS_TO_NAME_OF_GROUP(name="NAME", description="DESCRIPTION")) 
+
+    # Functions below
+

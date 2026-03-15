@@ -1,0 +1,188 @@
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from pathlib import Path
+from json import loads
+
+from datetime import datetime, timedelta
+from asyncio.windows_events import NULL
+
+base_path = Path(__file__).parent
+config = loads((base_path / "../config.json").read_text())
+
+SQUADRONMEMBERROLEID = config["squadronMemberRoleId"]
+FIRST_DEADLINE = config["firstDeadline"]
+FIRST_ACTIVITY_REQUIREMENT = config["firstActivityRequirement"]
+SECOND_DEADLINE = config["secondDeadline"]
+SECOND_ACTIVITY_REQUIREMENT = config["secondActivityRequirement"]
+EXEMPTION_SQ_RATING = config["exemptionSQRating"]
+
+SQUADRONSTAFFID = config["squadronStaffId"]
+
+isDevBot = config["devMode"]
+if isDevBot:
+    SQUADRONSTAFFID = 1306031448209363054
+COMMUNITYHOST = config["communityHostRoleId"]
+DBCHANNELID = config["DBChannelId"]
+JOIN_DEADLINE = config["joinDeadline"]
+
+# import all needed helper functions
+from helpers.data_helpers import get_squadron_kickable, get_squadron_players, get_discord_list, get_exemption_list
+from helpers.db import getFullUserData
+
+
+
+async def setup(bot : commands.Bot):
+    @bot.tree.command(description="A list of players who need to be kicked from the ingame squadron")
+    @app_commands.choices(type=[
+        app_commands.Choice(name='Both', value=0),
+        app_commands.Choice(name='Inactivity', value=1),
+        app_commands.Choice(name='Not in discord', value=2)
+    ])
+    async def kicklist(ctx :  discord.Interaction, type: app_commands.Choice[int]):
+        print('kicklist called')
+        if ((ctx.user.get_role(SQUADRONSTAFFID) == None) and not(ctx.user.id == 259644962876948480)):
+            await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
+            return
+        await ctx.response.send_message('Gathering the list for you!', ephemeral=True)
+        print('Generating kicklist...')
+        today = datetime.today()
+        print('Getting exemption list')
+        exemptionKickList = await get_exemption_list(bot)
+        print('Gathering squadron player list')
+        squadronList = await get_squadron_players()
+        print('Gathering kickable squadron player list')
+        kickAble = await get_squadron_kickable(bot, squadronList)
+        print('Marking inactivity reasons...')
+        for numbera, squadronMember in kickAble.items():
+            if squadronMember.get(5, NULL) == NULL:
+                squadronMember[5] = 'Inactivity'
+
+        print('Gathering discord member list')
+        discordMemberList = await get_discord_list(bot)
+        
+        print('Gathered all data... Processing kicklist...')
+        filteredMemberList = {}
+        for member in discordMemberList: 
+            if (member.nick != None):
+                filteredMemberList[len(filteredMemberList)] = member.nick[:member.nick.find('[')].strip()
+        notInDiscordList = {}
+        # compare each member in discord to the squadron
+        for numberb, squadronMember in squadronList.items():
+            found = False
+            for numbera, member in filteredMemberList.items():
+                #compare nickname
+                if member.replace(' ', '').lower() == squadronMember[0].lower():
+                    found = True
+                    #break list to skip to next user
+                    break
+            if (not found and (today - datetime.strptime(squadronMember[4], "%d.%m.%Y")).days > JOIN_DEADLINE):
+                squadronMember[5] = 'Not in discord'
+                notInDiscordList[len(notInDiscordList)] = squadronMember
+            squadronMember[5] = 'Inactivity'
+
+        print('Comparing not in discord list to kickable list...')
+        secondfinalList = notInDiscordList.copy()
+        for numbera, squadronMember in kickAble.items():
+            found = False
+            for numberb, member in notInDiscordList.items():
+                #compare nickname
+                if member[0].lower() == squadronMember[0].lower():
+                    found = True
+                    #break list to skip to next user
+                    break
+            if not found:
+                secondfinalList[len(secondfinalList)] = squadronMember
+        
+        print('Filtering final kicklist based on exemptions and squadron points...')
+        finalList = {}
+        for numbera, squadronMember in secondfinalList.items():
+            print(f'Checking exemption for {squadronMember[0]}')
+            if not (squadronMember[0].lower() in exemptionKickList):
+                print(f'{squadronMember[0]} is not exempt. Type: {squadronMember[5]}')
+                if squadronMember[5] == 'Inactivity':
+                    print("Checking sqb points for possible for " + squadronMember[0])
+                    # now one last check if he has points
+                    message, data = await getFullUserData(bot, squadronMember[0])
+                    # if they don't have any userdata, add them
+                    if data == None:
+                        finalList[len(finalList)] = squadronMember #
+                        print("Adding " + squadronMember[0] + " to kick list due to no squadron points.")
+                        continue
+
+                    hasPointsThisOrLastSeason = False
+                    # check if they have previous season points...
+                    if data.find("PreviousSeasonHighestSquadronRating") != -1:
+                        print("PreviousSeasonHighestSquadronRating: " + data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1].split(";")[0])
+                        if data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1][0] != "0":
+                            hasPointsThisOrLastSeason = True
+                    # check if they have current season points
+                    if data.find("HighestSquadronRating") != -1:
+                        print("HighestSquadronRating: " + data[data.find(";HighestSquadronRating"):].split(":")[1].split(";")[0])
+                        if data[data.find("HighestSquadronRating"):].split(":")[1][0] != "0":
+                            hasPointsThisOrLastSeason = True
+
+                    # if they have no points in this or last season, add them to the kick list
+                    if not hasPointsThisOrLastSeason:
+                        finalList[len(finalList)] = squadronMember #
+                        print("Adding " + squadronMember[0] + " to kick list due to no squadron points.")
+                    else:
+                        # they have points!
+                        print(squadronMember[0] + " has points.")
+                else:
+                    # Not in Discord or other reasons:
+                    finalList[len(finalList)] = squadronMember #
+
+        print('Sorting final kicklist...')        
+        # Convert date strings to datetime objects for sorting
+        for key, value in finalList.items():
+            value[4] = datetime.strptime(value[4], "%d.%m.%Y")  # Convert date to datetime
+        # Sort finalList based on (date, name)
+        sortedItems = sorted(finalList.items(), key=lambda x: x[1][0].lower())
+
+        finalSortedList = {i + 1: item[1] for i, item in enumerate(sortedItems)}
+        #print(sortedItems)
+        #print(finalSortedList)
+        #embed = discord.Embed(title=f"Member number 1", description=f"**{finalSortedList[1][0]}**", color=discord.Color.blue())
+        #await message.channel.send(embed=embed, view=MemberView(finalSortedList))
+        timeEnd = datetime.today()
+        timeTaken = timeEnd - today
+        print(f'Kicklist generated in {timeTaken.total_seconds():.2f} seconds.')
+        # change those in notice list to "Notice submitted"        
+        printString = f'```ansi\n'
+        amountToKick = "ERROR N/A"
+        if (type.value == 0):
+            amountToKick = len(finalSortedList)
+        else:
+            NIDToKick = 0
+            INACToKick = 0
+            for number, squadronMember in finalSortedList.items():
+                if squadronMember[5] == 'Not in discord':
+                    NIDToKick += 1
+                elif squadronMember[5] == 'Inactivity':
+                    INACToKick += 1
+            if type.value == 1: #Inactivity
+                amountToKick = INACToKick
+            elif type.value == 2: #Not in discord
+                amountToKick = NIDToKick
+            
+        printString += f'Users to kick: \u001b[1;31m{amountToKick}\u001b[0m   Time taken: {timeTaken.total_seconds():.2f} seconds\n'
+        printString += f'  Username             | Date joined | Reason\n'
+        for number, squadronMember in finalSortedList.items():
+            if ((type.value == 1 and squadronMember[5] == 'Not in discord') or (type.value == 2 and squadronMember[5] == 'Inactivity')):
+                continue
+            print(f'Preparing kicklist entry for {squadronMember[0]}')
+            if squadronMember[5] == 'Not in discord':
+                printString += f'- \u001b[33m{squadronMember[0].ljust(20)}\u001b[0m |  \u001b[34m{squadronMember[4].strftime("%d.%m.%Y")}\u001b[0m | \u001b[33m{squadronMember.get(5, "N/A")}\u001b[0m\n'
+            elif squadronMember[5] == 'Inactivity':
+                printString += f'- \u001b[36m{squadronMember[0].ljust(20)}\u001b[0m |  \u001b[34m{squadronMember[4].strftime("%d.%m.%Y")}\u001b[0m | \u001b[36m{squadronMember.get(5, "N/A")}\u001b[0m\n'
+            else:
+                printString += f'- {squadronMember[0].ljust(20)} |  \u001b[34m{squadronMember[4].strftime("%d.%m.%Y")}\u001b[0m | {squadronMember.get(5, "N/A")}\n'
+            if (len(printString) > 1900):
+                printString += '```'
+                await ctx.channel.send(printString)
+                printString = '```ansi\n'
+        printString += '```'
+        if (len(printString) > 15):
+            await ctx.channel.send(printString)
