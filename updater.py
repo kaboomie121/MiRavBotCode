@@ -109,3 +109,5 @@ def update():
         os._exit(0)
     else:
         logging.critical(r.text)    
+
+update()
