@@ -9,7 +9,7 @@ import base64
 
 VERSION_FILENAME = "version.txt"  # The version file
 BOT_FILENAME = "bot.py"  # The script being updated
-LOCAL_PATH = os.path.dirname(os.path.abspath(__file__)) +"\\"
+LOCAL_PATH = os.path.dirname(os.path.abspath(__name__)) +"\\"
 
 GITHUB_API_URL = "https://api.github.com/repos/kaboomie121/MiRavBotCode/contents/"
 GITHUB_API_BACKUP_URL = "https://raw.githubusercontent.com/kaboomie121/MiRavBotCode/refs/heads/master/"
