@@ -135,4 +135,6 @@ def update():
         print(r.text)
         logging.critical(r.text)
 
-update()
+        
+if __name__ == "__main__":
+    update()
