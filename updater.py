@@ -90,7 +90,7 @@ def update():
         # remove the old files in the base path (except logs and the extracted folder) and move the new files to the base path
         for file in os.listdir(base_path):
             try:
-                if (file == "logs" or file == filepath.removeprefix(base_path) or file == "updater.py"):
+                if (file == "logs" or file == filepath.removeprefix(base_path) or file == "token.json"):
                     continue
                 if os.path.isfile(os.path.join(base_path, file)) or os.path.islink(os.path.join(base_path, file)):
                     os.remove(os.path.join(base_path, file))
