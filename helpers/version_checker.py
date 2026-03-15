@@ -62,6 +62,10 @@ def checkForUpdate():
     print("\nChecking for updates...\n")
     remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
+        print(f"Remote version: {remote_version}")
+        logging.info(f"Remote version: {remote_version}")
+        print(f"Local version: {get_local_version()}")
+        logging.info(f"Local version: {get_local_version()}")
         local_version = get_local_version()
         if str(remote_version) != str(local_version):
             logging.info(f"\033[32mUpdate found!\033[0m New version: {remote_version}")
