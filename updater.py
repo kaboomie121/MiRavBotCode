@@ -88,17 +88,21 @@ def update():
                 break
         
         # remove the old files in the base path (except logs and the extracted folder) and move the new files to the base path
-        try:
-            for file in os.listdir(base_path):
+        for file in os.listdir(base_path):
+            try:
                 if (file == "logs" or file == filepath.removeprefix(base_path) or file == "updater.py"):
                     continue
-                logging.info(f'Removing file in base path: {file}')
-                print(f'Removing file in base path: {file}')
-                os.remove(os.path.join(base_path, file))
-        except Exception as e:
-            print(f'Error while removing file: {e}')
-            logging.critical(f'Error removing file: {e}')
-            return
+                if os.path.isfile(os.path.join(base_path, file)) or os.path.islink(os.path.join(base_path, file)):
+                    os.remove(os.path.join(base_path, file))
+                    logging.info(f'Removing file in base path: {file}')
+                    print(f'Removing file in base path: {file}')
+                elif os.path.isdir(os.path.join(base_path, file)):
+                    shutil.rmtree(os.path.join(base_path, file))
+                    logging.info(f'Removing directory in base path: {file}')
+                    print(f'Removing directory in base path: {file}')
+            except Exception as e:
+                print(f'Error while removing file: {e}')
+                logging.critical(f'Error removing file: {e}')
         
 
         # move the files
