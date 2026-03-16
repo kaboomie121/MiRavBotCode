@@ -25,7 +25,9 @@ public class Program
         .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme) // This was likely missing or misconfigured
         .AddDiscord(DiscordAuthenticationDefaults.AuthenticationScheme, options =>
         {
-            if (bool.Parse(builder.Configuration["Config:DevMode"]!) == true)
+            var devMode = builder.Configuration["DiscordDevMode:Enabled"]?.ToLower() ?? "false";
+
+            if (devMode == "true")
             {
                 options.ClientId = builder.Configuration["DiscordDevMode:ClientId"]!;
                 options.ClientSecret = builder.Configuration["DiscordDevMode:ClientSecret"]!;
