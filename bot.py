@@ -1,13 +1,36 @@
 # Set up logging
 import os
 
-from pathlib import Path
-
-Path('logs').mkdir(exist_ok=True)
-
-from datetime import datetime, timedelta
 import logging
-logging.basicConfig(level=logging.INFO, filename=f'logs\\{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log', filemode='w', format='%(asctime)s - %(relativeCreated)d - %(name)s - %(levelname)s - %(filename)s | %(funcName)s:%(lineno)d - %(message)s')
+from pathlib import Path
+from datetime import timedelta, datetime
+
+# Ensure logs folder exists
+Path("logs").mkdir(exist_ok=True)
+
+# Create a logger
+logger = logging.getLogger("updater_logger")
+logger.setLevel(logging.INFO)  # minimum level
+
+# File handler
+log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
+file_handler = logging.FileHandler(log_file, mode='w')
+file_handler.setLevel(logging.INFO)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Formatter (used by both handlers)
+formatter = logging.Formatter(
+    '%(asctime)s - %(relativeCreated)d - %(name)s - %(levelname)s - %(filename)s | %(funcName)s:%(lineno)d - %(message)s'
+)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 # if there are more than 5 log files, delete the oldest one and not _updater logs
 log_files = [f for f in os.listdir('logs') if f.endswith('.log') and not f.endswith('_updater.log')]
