@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 Path("logs").mkdir(exist_ok=True)
 
 # Create a logger
-logger = logging.getLogger("updater_logger")
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)  # minimum level
 
 # File handler
