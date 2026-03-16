@@ -4,6 +4,8 @@ import os
 import logging
 from pathlib import Path
 from datetime import timedelta, datetime
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 # Ensure logs folder exists
 Path("logs").mkdir(exist_ok=True)
@@ -18,7 +20,7 @@ file_handler = logging.FileHandler(log_file, mode='w')
 file_handler.setLevel(logging.INFO)
 
 # Console handler
-console_handler = logging.StreamHandler()
+console_handler = logging.StreamHandler(open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1))
 console_handler.setLevel(logging.INFO)
 
 # Formatter (used by both handlers)
