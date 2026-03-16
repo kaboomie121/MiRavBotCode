@@ -152,11 +152,11 @@ async def nextseason(ctx:  discord.Interaction):
     for messageMain in messages:
         # we check if they have the "HighestSquadronRating" in the message, if so, get the data, set it to 0 and put it in "PreviousSeasonHighestSquadronRating"
         if messageMain.content.find("HighestSquadronRating") != -1:
-            message, data = await getData(messageMain.content.split("|")[0], "HighestSquadronRating")
+            message, data = await getData(client, messageMain.content.split("|")[0], "HighestSquadronRating")
             if data == None:
                 continue
-            await writedata(message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
-            await writedata(message.content.split("|")[0], "HighestSquadronRating", "0")
+            await writedata(client, message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
+            await writedata(client, message.content.split("|")[0], "HighestSquadronRating", "0")
     await ctx.response.edit_message(content="All done! Next season started!.")
  
     
@@ -435,7 +435,7 @@ class EventView(discord.ui.View):
             except:
                 logging.exception("⚠️ Something went wrong when deleting an event")
             finally:
-                await removedatakey("OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
+                await removedatakey(client, "OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
 
     @discord.ui.button(label="Attend", style=discord.ButtonStyle.green, custom_id="primarybutton")
     async def button_primary(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -582,7 +582,7 @@ class EventGroup(app_commands.Group):
             whotopingText = "<@&1338270607220932639> and <@&1300018031002652754>" # Both pings
 
         myView.message = await ctx.channel.send(whotopingText, embed=embed, view=myView)
-        await writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await writedata(client,"OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
@@ -829,7 +829,7 @@ class EventGroup(app_commands.Group):
                 
         myView = EventView(embed, ctx.user, hostDate, True, 8, True)
         myView.message = await ctx.channel.send('<@&1338270607220932639>', embed=embed, view=myView)
-        await writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
@@ -1010,9 +1010,9 @@ async def task_write_squadron_highest_SQBrating():
     for _number_, personData in squadronPlayers.items():
         if int(personData[1]) == 0:
             continue
-        message, squadronRating = await getData(str(personData[0]), "HighestSquadronRating")
+        message, squadronRating = await getData(client, str(personData[0]), "HighestSquadronRating")
         if squadronRating == None or int(squadronRating) < int(personData[1]):
-            await writedata(personData[0], "HighestSquadronRating", personData[1])
+            await writedata(client, personData[0], "HighestSquadronRating", personData[1])
 
     logging.info(f'{datetime.now()} | Task "task_write_squadron_highest_SQBrating" done')
 
@@ -1140,14 +1140,14 @@ async def on_ready():
                     # Event can continue!
                     myView = EventView(oldEmbed, user, hostDate, squadronMembersOnly, maxAttendees, reserveList!=None, primaryList, reserveList)
                     myView.message = await message.edit( content=message.content, embed=oldEmbed, view=myView)
-                    #await writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+                    #await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
                     myView.id = datetime.today().timestamp()
                     myView.owner = user
                     client.add_view(view=myView, message_id=myView.message.id)
                     logging.info("Event done!")
                 except:
                     logging.error("Something went wrong with loading event:", event, "This event won't be able to restart anymore... Deleting...")
-                    await removedatakey("OngoingEvents", event.split(":")[0])
+                    await removedatakey(client, "OngoingEvents", event.split(":")[0])
                     logging.info("Deleted")
 
 
