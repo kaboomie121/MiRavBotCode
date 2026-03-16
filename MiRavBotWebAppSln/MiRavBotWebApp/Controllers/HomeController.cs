@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using WebApplicationTest.Models;
+using MiRavBotWebApp.Models;
 
-namespace WebApplicationTest.Controllers;
+namespace MiRavBotWebApp.Controllers;
 
 public class HomeController : Controller
 {

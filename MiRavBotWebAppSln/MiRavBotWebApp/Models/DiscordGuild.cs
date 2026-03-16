@@ -1,4 +1,4 @@
-﻿namespace WebApplicationTest.Models;
+﻿namespace MiRavBotWebApp.Models;
 
 public class DiscordGuild
 {

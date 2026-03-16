@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
-using WebApplicationTest.Models;
+using MiRavBotWebApp.Models;
 
-namespace WebApplicationTest.Controllers;
+namespace MiRavBotWebApp.Controllers;
 
 [Authorize]
 public class DashboardController : Controller
