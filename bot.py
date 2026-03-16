@@ -1010,7 +1010,7 @@ async def task_write_squadron_highest_SQBrating():
     for _number_, personData in squadronPlayers.items():
         if int(personData[1]) == 0:
             continue
-        message, squadronRating = await getData(str(personData[0]), "HighestSquadronRating")
+        message, squadronRating = await getData(client, str(personData[0]), "HighestSquadronRating")
         if squadronRating == None or int(squadronRating) < int(personData[1]):
             await writedata(personData[0], "HighestSquadronRating", personData[1])
 
