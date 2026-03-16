@@ -28,8 +28,8 @@ DBCHANNELID = config["DBChannelId"]
 JOIN_DEADLINE = config["joinDeadline"]
 
 # import all needed helper functions
-from helpers.data_helpers import get_squadron_kickable, get_squadron_players, get_discord_list, get_exemption_list
-from helpers.db import getFullUserData
+from helperFunctions.data_helpers import get_squadron_kickable, get_squadron_players, get_discord_list, get_exemption_list
+from helperFunctions.db import getFullUserData
 
 
 

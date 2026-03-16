@@ -27,7 +27,7 @@ EXEMPTION_SQ_RATING = config["exemptionSQRating"]
 JOIN_DEADLINE = config["joinDeadline"]
 
 # import all needed helper functions
-from helpers.db import getData
+from helperFunctions.db import getData
 
 def FindFirstIndex(string, findChar):
     for charNumber_, char in enumerate(string):

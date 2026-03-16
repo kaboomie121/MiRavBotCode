@@ -1,6 +1,6 @@
 token.json
 /.vs
-/helpers/__pycache__
+/helperFunctions/__pycache__
 /extensions/__pycache__
 /__pycache__
 /logs

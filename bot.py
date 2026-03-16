@@ -107,10 +107,10 @@ botTimeStarted = datetime.now()
 DBCHANNELID = config["DBChannelId"]
   
 # import all needed helper functions
-from helpers.data_helpers import get_squadron_players, get_squadron_kickable, get_discord_list, get_exemption_list, get_discord_exemption_list
-from helpers.db import getFullUserData, writedata, removedatakey, getData
-from helpers.helper_functions import IsUserSquadronStaff, IsUserBotOwner
-from helpers.version_checker import checkForUpdate
+from helperFunctions.data_helpers import get_squadron_players, get_squadron_kickable, get_discord_list, get_exemption_list, get_discord_exemption_list
+from helperFunctions.db import getFullUserData, writedata, removedatakey, getData
+from helperFunctions.helper_functions import IsUserSquadronStaff, IsUserBotOwner
+from helperFunctions.version_checker import checkForUpdate
 from updater import update
 
 
@@ -1003,6 +1003,7 @@ async def task_write_squadron_highest_SQBrating():
     logging.info(f'{datetime.now()} | Running "task_write_squadron_highest_SQBrating", 6h have passed.')
 
     squadronPlayers = await get_squadron_players()
+    logging.info(f"Got squadron players: {squadronPlayers}")
 
     for _number_, personData in squadronPlayers.items():
         if int(personData[1]) == 0:

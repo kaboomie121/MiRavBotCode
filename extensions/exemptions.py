@@ -18,8 +18,8 @@ if isDevBot:
     SQUADRONSTAFFID = 1306031448209363054
 
 # import all needed helper functions
-from helpers.data_helpers import get_exemption_list, get_discord_exemption_list
-from helpers.db import writedata
+from helperFunctions.data_helpers import get_exemption_list, get_discord_exemption_list
+from helperFunctions.db import writedata
 
 @app_commands.guild_only()
 class ExemptionListGroup(app_commands.Group):
