@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to Bot Manager</h1>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>You are logged in! Head over to your servers to get started.</p>
+        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary btn-lg">
+            Go to Dashboard
+        </a>
+    }
+    else
+    {
+        <p>Please login with Discord to manage your bots.</p>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-secondary">
+            Login with Discord
+        </a>
+    }
+</div>
