@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/WebApplicationTest.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100" style="margin-bottom: 0;">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
@@ -34,15 +34,14 @@
         </nav>
     </header>
     
-    <!-- Changed "container" to "container-fluid" here to allow full-width content -->
-    <div class="container-fluid">
+    <div class="container-fluid flex-grow-1">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <!-- Optional: Also change the footer's container to container-fluid if you want it to match -->
-    <footer class="border-top footer text-muted">
+    <!-- Removed "footer" class to detach it from the absolute positioning in site.css, added py-3 for spacing -->
+    <footer class="border-top text-muted mt-auto py-3">
         <div class="container-fluid">
             &copy; 2026 - MiRavbot
         </div>
