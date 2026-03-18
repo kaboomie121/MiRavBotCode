@@ -10,24 +10,34 @@ sys.stdout.reconfigure(encoding='utf-8')
 # Ensure logs folder exists
 Path("logs").mkdir(exist_ok=True)
 
+# Set the one of the following levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+loggingLevel = logging.INFO
+# Set max amount of logs
+MAX_LOGS_AMOUNT = 5
+
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # minimum level
-
-# File handler
-log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
-file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-
-# Console handler
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.INFO)
+logger.setLevel(loggingLevel)
 
 # Formatter (used by both handlers)
 formatter = logging.Formatter(
     '%(asctime)s - %(relativeCreated)d - %(name)s - %(levelname)s - %(filename)s | %(funcName)s:%(lineno)d - %(message)s'
 )
-file_handler.setFormatter(formatter)
+
+# File handler
+def create_file_handler():
+    log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
+    handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+    handler.setLevel(loggingLevel)
+    handler.setFormatter(formatter)
+    return handler
+
+file_handler = create_file_handler()
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(loggingLevel)
+
 console_handler.setFormatter(formatter)
 
 # Add handlers to logger
@@ -35,19 +45,26 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 # if there are more than 5 log files, delete the oldest one and not _updater logs
-log_files = [f for f in os.listdir('logs') if f.endswith('.log') and not f.endswith('_updater.log')]
-log_files.sort()
-while True:
-    if len(log_files) > 5:
-        logging.info(f'More than 5 log ({len(log_files)}) files found, deleting oldest log file: {log_files[0]}')
-        try:
-            os.remove(os.path.join('logs', log_files[0]))
-        except Exception as e:
-            logging.critical(f'Breaking operation; Error while deleting log file: {e}')
+def RemoveOldLogs():
+    logging.info(f"Checking to delete logs if there are more than {MAX_LOGS_AMOUNT} logs")
+    global log_files
+    log_files = [f for f in os.listdir('logs') if f.endswith('.log') and not f.endswith('_updater.log')]
+    log_files.sort()
+    logging.debug(f'We have {len(log_files)} / {MAX_LOGS_AMOUNT} logs')
+    while True:
+        if len(log_files) > MAX_LOGS_AMOUNT:
+            logging.info(f'More than {MAX_LOGS_AMOUNT} log ({len(log_files)}) files found, deleting oldest log file: {log_files[0]}')
+            try:
+                logging.debug(f'Attempting to remove: {os.path.join('logs', log_files[0])}')
+                os.remove(os.path.join('logs', log_files[0]))
+            except Exception as e:
+                logging.critical(f'Breaking operation; Error while deleting log file: {e}')
+                break
+            log_files.pop(0)
+        else:
             break
-        log_files.pop(0)
-    else:
-        break
+
+RemoveOldLogs()
 
 logging.info('Logging INIT done, starting bot.py')
 # Configureable
@@ -77,6 +94,7 @@ if isDevBot:
 else:
     TOKEN = token["token"]
 
+LOGGING_CHANNEL = config["loggingChannelId"]
 DISCORDGUILD = config["discordGuild"]
 TESTDISCORDGUILD = config["testDiscordGuild"]
 NOTICELIST_CHANNEL = config["noticeListChannelId"]
@@ -995,6 +1013,42 @@ async def task_check_join_date():
         else:
             logging.info(f"{guildmember.name} is NOT in here for a year")
 
+skipFirstUploadTaskRun = True
+@tasks.loop(hours=48)
+async def task_upload_last_log():
+    global skipFirstUploadTaskRun
+    if skipFirstUploadTaskRun == True:
+        logging.info('Skipping first upload run...')
+        skipFirstUploadTaskRun = False
+        return
+    logging.info(f'Running "task_upload_logs", 48h have passed.')
+    global file_handler
+
+    # stop logs
+    logging.info("Stopping filelogs for upload...")
+    for handler in logger.handlers[:]:
+        if isinstance(handler, logging.FileHandler):
+            logger.removeHandler(handler)
+            handler.close()
+
+    file_handler = create_file_handler()
+    logger.addHandler(file_handler)
+    logging.info("Logging initialised!")
+    logging.info(client.user.name)
+
+    # handlers done
+    RemoveOldLogs()
+
+    log_file = log_files[-2]
+    channel = client.get_channel(LOGGING_CHANNEL)
+    logging.info('Attempting to send past log to discord')
+    try:
+        await channel.send(file=discord.File(os.path.join("logs", log_file)))
+    except Exception as e:
+        logging.warning(f"Failed to send current log: {e}")
+
+
+
 @tasks.loop(hours=6)
 async def task_write_squadron_highest_SQBrating():
     logging.info(f'Running "task_write_squadron_highest_SQBrating", 6h have passed.')
@@ -1029,7 +1083,7 @@ async def on_ready():
     logging.info('Attempting to load ongoing events...')
     # if there is currently no persistent views upon start, do this...
     logging.info(f"Persistent views: {client.persistent_views}")
-    if len(client.persistent_views) == 0:
+    if len(client.persistent_views) == 0 and not isDevBot:
         # Check all events, if they are valid
         _, eventData = await getFullUserData(client, "OngoingEvents")
         if not (eventData == None):
@@ -1144,11 +1198,23 @@ async def on_ready():
                     logging.error("Something went wrong with loading event:", event, "This event won't be able to restart anymore... Deleting...")
                     await removedatakey(client, "OngoingEvents", event.split(":")[0])
                     logging.info("Deleted")
+    logging.info('Done loading events!')
+
+    channel = client.get_channel(LOGGING_CHANNEL)
+    logging.info('Attempting to send previous log to discord')
+    try:
+        await channel.send(file=discord.File(os.path.join("logs", log_files[-2])))
+    except Exception as e:
+        logging.warning(f"Failed to send previous log: {e}")
 
 
-    logging.info('Done loading! Starting tasks')
+
+    logging.info(f'Attempting to start tasks...')
     if not task_end_old_events.is_running():
         logging.info(f'Task "{(task_end_old_events.start()).get_name()}" is running...')
+
+    if not task_upload_last_log.is_running():
+        logging.info(f'Task "{(task_upload_last_log.start()).get_name()}" is running...')
           
     if not isDevBot:
         if not task_write_squadron_highest_SQBrating.is_running():

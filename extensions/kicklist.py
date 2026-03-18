@@ -81,10 +81,11 @@ async def setup(bot : commands.Bot):
                     found = True
                     #break list to skip to next user
                     break
+            squadronMember[5] = 'Inactivity'
             if (not found and (today - datetime.strptime(squadronMember[4], "%d.%m.%Y")).days > JOIN_DEADLINE):
                 squadronMember[5] = 'Not in discord'
                 notInDiscordList[len(notInDiscordList)] = squadronMember
-            squadronMember[5] = 'Inactivity'
+                logging.debug(f'Marked {squadronMember[0]} as not in discord.')
 
         logging.info('Comparing not in discord list to kickable list...')
         secondfinalList = notInDiscordList.copy()

@@ -1,5 +1,5 @@
 {
-    "devMode": true,
+    "devMode": false,
     
     "discordGuild": 1194494035189051472,
     "testDiscordGuild" : 1292920930686861433,
@@ -16,5 +16,6 @@
     "squadronStaffId" : 1234376539987251292,
     "communityHostRoleId" : 1252184328687849515,
 
-    "DBChannelId": 1357823210422534305
+    "DBChannelId": 1357823210422534305,
+    "loggingChannelId": 1483868456196767745
 }
