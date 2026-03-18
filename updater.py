@@ -30,17 +30,17 @@ while True:
         break
 
 def update():
-    print('Starting update process...')
     logging.info('Starting update process...')
     base_path = str(Path(__file__).parent) + "/"
 
-    headers = {
-        "Authorization" : 'token ghp_r5***',
-        "Accept": 'application/vnd.github.v3+json'
-    #    "Accept": '*.*',
-    }
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
+    token = ""
+
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    headers = ""
     OWNER = 'kaboomie121'
     REPO  = 'miravbotcode'
 
@@ -50,21 +50,17 @@ def update():
     #EXT  = 'tar'  # it also works
     url = f'https://api.github.com/repos/{OWNER}/{REPO}/{EXT}ball/{REF}'
     logging.info('github url:' + url)
-    print('github url:' + url)
 
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
-        print('Update package downloaded successfully.')
+        logging.info('Update package downloaded successfully.')
         logging.info('size:' + str(len(r.content)))
-        print('size:' + str(len(r.content)))
         # save the file
         try:
             with open(base_path + f'output.{EXT}', 'wb') as fh:
                 fh.write(r.content)
-                print(f'File {base_path}output.{EXT} saved successfully.')
                 logging.info(f'File {base_path}output.{EXT} saved successfully.')
         except Exception as e:
-            print(f'Error saving the file: {e}')
             logging.critical(f'Error saving the file: {e}')
             return
 
@@ -72,10 +68,8 @@ def update():
         try:
             with zipfile.ZipFile(base_path + f'output.{EXT}', 'r') as zip_ref:
                 zip_ref.extractall(base_path)
-                print(f'File {base_path}output.{EXT} extracted successfully.')
                 logging.info(f'File {base_path}output.{EXT} extracted successfully.')
         except Exception as e:
-            print(f'Error extracting the file: {e}')
             logging.critical(f'Error extracting the file: {e}')
             return
 
@@ -83,7 +77,6 @@ def update():
         for file in os.listdir(base_path):
             filepath = os.path.join(base_path, file)
             if os.path.basename(filepath).startswith("kaboomie121-MiRavBotCode"):
-                print('extracted folder:' + filepath)
                 logging.info('extracted folder:' + filepath)
                 break
         
@@ -95,13 +88,10 @@ def update():
                 if os.path.isfile(os.path.join(base_path, file)) or os.path.islink(os.path.join(base_path, file)):
                     os.remove(os.path.join(base_path, file))
                     logging.info(f'Removing file in base path: {file}')
-                    print(f'Removing file in base path: {file}')
                 elif os.path.isdir(os.path.join(base_path, file)):
                     shutil.rmtree(os.path.join(base_path, file))
                     logging.info(f'Removing directory in base path: {file}')
-                    print(f'Removing directory in base path: {file}')
             except Exception as e:
-                print(f'Error while removing file: {e}')
                 logging.critical(f'Error removing file: {e}')
         
 
@@ -109,30 +99,23 @@ def update():
         for file in os.listdir(filepath):
             try:
                 shutil.move(os.path.join(filepath, file), os.path.join(base_path, file))
-                print(f'Moved {os.path.join(filepath, file)} to {os.path.join(base_path, file)}')
                 logging.info(f'Moved {os.path.join(filepath, file)} to {os.path.join(base_path, file)}')    
             except Exception as e:
-                print(f'Error while moving file {file}: {e}')
                 logging.critical(f'Error moving file: {e}')
         
         # remove the empty extracted folder
         try:
             os.removedirs(filepath)
         except Exception as e:
-            print(f'Error while removing empty folder: {e}')
             logging.critical(f'Error removing empty folder: {e}')
             return
         # All succeeded, start bot and kill myself
-        print('Update successful, starting bot...')
         logging.info('Update successful, starting bot...')
         os.system(f'start cmd /c "cd {base_path} && python bot.py"')
         logging.info('Bot start called, exiting updater...')
         os._exit(0)
-        print('Bot start called, exiting updater...')
     else:
-        print(f'Failed to download update package. Status code: {r.status_code}')
         logging.critical(f'Failed to download update package. Status code: {r.status_code}')
-        print(r.text)
         logging.critical(r.text)
 
         
