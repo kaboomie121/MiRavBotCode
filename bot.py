@@ -89,7 +89,7 @@ from discord import Client, Embed, Interaction, app_commands, ui
 from discord.ext import commands
 import requests
 
-client = commands.Bot(intents=discord.Intents.all(), command_prefix=None, help_command=None)
+client = commands.Bot(intents=discord.Intents.all(), command_prefix="thisisnotneeded", help_command=None)
 
 
 FIRST_DEADLINE = config["firstDeadline"]
