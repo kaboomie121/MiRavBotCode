@@ -41,7 +41,7 @@ async def get_notice_list(client : discord.Client):
     if isDevBot:
         print ('Dev bot is running: Returning empty list')
         return list()
-    print('Dev bot is not running: Getting real notice list')
+    logging.info('Dev bot is not running: Getting real notice list')
     messages = [message async for message in client.get_channel(NOTICELIST_CHANNEL).history(limit=123)]
     returnList = list()
     for message in messages:
@@ -95,7 +95,7 @@ async def get_discord_exemption_list(client : discord.Client):
     return listExemptions.split("§§")
 
 async def get_exemption_list(client : discord.Client):
-    print( 'Getting ingame exemption list...')
+    logging.info( 'Getting ingame exemption list...')
     _, listExemptions = await getData(client, "Bot", "ExemptionListIGN")
     
     if listExemptions == None:
@@ -105,7 +105,7 @@ async def get_exemption_list(client : discord.Client):
 
 
 async def get_squadron_kickable(client : discord.Client, personList):
-    print('Getting kickable squadron members...')
+    logging.info('Getting kickable squadron members...')
     noticeList = await get_notice_list(client)
     
     # Convert string to datetime object
@@ -114,7 +114,7 @@ async def get_squadron_kickable(client : discord.Client, personList):
     # Get today's date
     today = datetime.today()
 
-    print('Comparing squadron members to notice list and activity requirements...')
+    logging.info('Comparing squadron members to notice list and activity requirements...')
     returnList = {}
     for personNumber, personData in personList.items():
         given_date = datetime.strptime(personData[4], date_format)
@@ -132,13 +132,13 @@ async def get_squadron_kickable(client : discord.Client, personList):
             continue
         if (int(personData[1]) < EXEMPTION_SQ_RATING and int(personData[2]) < FIRST_ACTIVITY_REQUIREMENT and -(given_date.date() - today.date()).days >= FIRST_DEADLINE ) or (int(personData[1]) < EXEMPTION_SQ_RATING and int(personData[2]) < SECOND_ACTIVITY_REQUIREMENT and -(given_date.date() - today.date()).days >= SECOND_DEADLINE ) :
             returnList[len(returnList)] = personData
-            print(f'Added {personData[0]} to kickable list.')
+            logging.info(f'Added {personData[0]} to kickable list.')
     
 
     return returnList
 
 async def get_discord_list(client : discord.Client):
-    print('Getting discord member list...')
+    logging.info('Getting discord member list...')
     if isDevBot:
         return (client.get_guild(TESTDISCORDGUILD)).members
     guild = client.get_guild(DISCORDGUILD)
@@ -148,7 +148,7 @@ async def get_discord_list(client : discord.Client):
 # position 0 is name, 1 is SQB rating,
 # 2 is activity, 3 is role, 4 is join date
 async def get_squadron_players():
-    print('Getting squadron player list from warthunder.com...')
+    logging.info('Getting squadron player list from warthunder.com...')
     # Making a GET request
     r = requests.get('https://warthunder.com/en/community/claninfo/Midnight%20Ravens')
 
