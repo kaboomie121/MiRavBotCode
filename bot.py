@@ -168,7 +168,7 @@ async def nextseason(ctx:  discord.Interaction):
 async def allsquadronmembers(ctx:  discord.Interaction, sorting: app_commands.Choice[int]):
     await ctx.response.send_message('Gathering all players...', ephemeral=True)
 
-    squadronList = await get_squadron_players()
+    squadronList = await get_squadron_players(client)
     squadronList = list(squadronList.values())
     if sorting.value in [1, 2]:
         # Sorting logic based on list index
@@ -240,9 +240,9 @@ async def verifymembers(ctx:  discord.Interaction):
     usersNoUTC = 0
     totalOtherSquadrons = 0
     totalRepresentingAllies = 0
-    discordMembers = await get_discord_list()
-    discordExemptionList = await get_discord_exemption_list()
-    squadronMembers = await get_squadron_players()
+    discordMembers = await get_discord_list(client)
+    discordExemptionList = await get_discord_exemption_list(client)
+    squadronMembers = await get_squadron_players(client)
     otherSquadronRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1374461613083590667)
     allyRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1346451233543557121)
     memberRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1338270607220932639)
@@ -308,7 +308,7 @@ async def verifymembers(ctx:  discord.Interaction):
 @client.tree.command(description="Check if the username is found in the squadron.")
 async def checkmembername(ctx :  discord.Interaction, name: str):
     found = False
-    squadronMembers = await get_squadron_players()
+    squadronMembers = await get_squadron_players(client)
     squadronMemberFound = ''
     for counterB, squadronMember in squadronMembers.items():
         if name.strip().lower().replace(' ', '') == squadronMember[0].strip().lower().replace(' ', ''):
@@ -867,7 +867,7 @@ async def test(ctx : discord.Interaction):
 @client.tree.command(description="statistics such as total utc per type!")
 async def stats(message):
     # Get the list of discord members
-    discord_members = await get_discord_list()
+    discord_members = await get_discord_list(client)
 
     # make a list of all timezones too
     utcList = []
@@ -956,13 +956,12 @@ async def warthunderguessr(ctx: discord.Interaction, difficulty: app_commands.Ch
     message = await ctx.channel.send("WarthunderGuessr started! You have 3 minutes to guess the location by using the buttons below!", view=view)
     view.message = message
     view.owner = ctx.user
-    client.add_view(view=view, message_id=message.id)
     
 
 # Checks if 6hours have passed since the start of the event, if so, stop the event.
 @tasks.loop(minutes=1)
 async def task_end_old_events():
-    logging.info(f'{datetime.now()} | Running "task_end_old_events", 1m has passed.')
+    logging.info(f'Running "task_end_old_events", 1m has passed.')
 
     if client.persistent_views:
         for view in client.persistent_views:
@@ -980,7 +979,7 @@ async def task_end_old_events():
                     view.started = True
                     await view.start()
 
-    logging.info(f'{datetime.now()} | Task "task_end_old_events" done')
+    logging.info(f'Task "task_end_old_events" done')
 
 @tasks.loop(hours=12)
 async def task_check_join_date():
@@ -998,9 +997,9 @@ async def task_check_join_date():
 
 @tasks.loop(hours=6)
 async def task_write_squadron_highest_SQBrating():
-    logging.info(f'{datetime.now()} | Running "task_write_squadron_highest_SQBrating", 6h have passed.')
+    logging.info(f'Running "task_write_squadron_highest_SQBrating", 6h have passed.')
 
-    squadronPlayers = await get_squadron_players()
+    squadronPlayers = await get_squadron_players(client)
     logging.info(f"Got squadron players: {squadronPlayers}")
 
     for _number_, personData in squadronPlayers.items():
@@ -1010,7 +1009,7 @@ async def task_write_squadron_highest_SQBrating():
         if squadronRating == None or int(squadronRating) < int(personData[1]):
             await writedata(client, personData[0], "HighestSquadronRating", personData[1])
 
-    logging.info(f'{datetime.now()} | Task "task_write_squadron_highest_SQBrating" done')
+    logging.info(f'Task "task_write_squadron_highest_SQBrating" done')
 
 @client.event
 async def on_ready():
@@ -1094,7 +1093,7 @@ async def on_ready():
 
                     # Get user
                     user = oldEmbed.author.name[10:].strip()
-                    discordList = await get_discord_list()
+                    discordList = await get_discord_list(client)
                     found = False
                     logging.info(f"Searching for host of event: \"{oldEmbed.title}\"")
                     for discordUser in discordList:
