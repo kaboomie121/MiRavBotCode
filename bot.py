@@ -16,11 +16,11 @@ logger.setLevel(logging.INFO)  # minimum level
 
 # File handler
 log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
-file_handler = logging.FileHandler(log_file, mode='w')
+file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
 file_handler.setLevel(logging.INFO)
 
 # Console handler
-console_handler = logging.StreamHandler(open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1))
+console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 
 # Formatter (used by both handlers)
@@ -89,7 +89,7 @@ from discord import Client, Embed, Interaction, app_commands, ui
 from discord.ext import commands
 import requests
 
-client = commands.Bot(intents=discord.Intents.all(), command_prefix=None, help_command=None)
+client = commands.Bot(intents=discord.Intents.all(), command_prefix="thisisnotneeded", help_command=None)
 
 
 FIRST_DEADLINE = config["firstDeadline"]
@@ -109,7 +109,7 @@ botTimeStarted = datetime.now()
 DBCHANNELID = config["DBChannelId"]
   
 # import all needed helper functions
-from helperFunctions.data_helpers import get_squadron_players, get_squadron_kickable, get_discord_list, get_exemption_list, get_discord_exemption_list
+from helperFunctions.data_helpers import get_squadron_players, get_discord_list, get_discord_exemption_list
 from helperFunctions.db import getFullUserData, writedata, removedatakey, getData
 from helperFunctions.helper_functions import IsUserSquadronStaff, IsUserBotOwner
 from helperFunctions.version_checker import checkForUpdate
@@ -126,18 +126,14 @@ if not isDevBot:
 async def periodic_update_check():
     if isDevBot:
         logging.warning('Periodic update check called, but bot is in dev mode, skipping update check.')
-        print("\033[33mPeriodic update check called, but bot is in dev mode, skipping update check.\033[0m")
         return
     logging.info('Running periodic update check...')
-    print("\033[33mRunning periodic update check...\033[0m")
     if checkForUpdate():
         logging.info('Update found during periodic check, restarting bot...')
-        print("\033[32mUpdate found during periodic check, restarting bot...\033[0m")
         os.execv(sys.executable, [sys.executable] + sys.argv)
         os._exit(0)
     else:
         logging.info('No update found during periodic check.')
-        print("\033[33mNo update found during periodic check.\033[0m")
 
 
 
