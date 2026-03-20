@@ -85,6 +85,7 @@ import discord.ext.commands
 base_path = Path(__file__).parent
 config = loads((base_path / "config.json").read_text())
 token = loads((base_path / "token.json").read_text())
+versiontxt = (base_path / "version.txt").read_text()
 
 isDevBot = config["devMode"]
 hostUser = token["user"]
@@ -848,6 +849,10 @@ class EventGroup(app_commands.Group):
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
 
+
+@client.tree.command(description="Shows the version of the bot")
+async def version(ctx :  discord.Interaction):
+    await ctx.response.send_message(versiontxt)
 
 @client.tree.command(description="Testing")
 async def test(ctx : discord.Interaction):
