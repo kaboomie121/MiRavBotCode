@@ -27,7 +27,7 @@ EXEMPTION_SQ_RATING = config["exemptionSQRating"]
 JOIN_DEADLINE = config["joinDeadline"]
 
 # import all needed helper functions
-from helperFunctions.db import getData
+from helperFunctions.db import GetData
 
 def FindFirstIndex(string, findChar):
     for charNumber_, char in enumerate(string):
@@ -85,18 +85,18 @@ async def get_notice_list(client : discord.Client):
 
     return returnList
     
-async def get_discord_exemption_list(client : discord.Client):
+async def get_discord_exemption_list():
     print ('Getting discord exemption list...')
-    _, listExemptions = await getData(client, "Bot", "ExemptionListDISCORD")
+    _, listExemptions = await GetData("Bot", "ExemptionListDISCORD")
     
     if listExemptions == None:
         listExemptions = ""
         
     return listExemptions.split("§§")
 
-async def get_exemption_list(client : discord.Client):
+async def get_exemption_list():
     logging.info( 'Getting ingame exemption list...')
-    _, listExemptions = await getData(client, "Bot", "ExemptionListIGN")
+    _, listExemptions = await GetData("Bot", "ExemptionListIGN")
     
     if listExemptions == None:
         listExemptions = ""
@@ -104,9 +104,9 @@ async def get_exemption_list(client : discord.Client):
     return listExemptions.split("§§")
 
 
-async def get_squadron_kickable(client : discord.Client, personList):
+async def get_squadron_kickable(personList):
     logging.info('Getting kickable squadron members...')
-    noticeList = await get_notice_list(client)
+    noticeList = await get_notice_list()
     
     # Convert string to datetime object
     date_format = "%d.%m.%Y"

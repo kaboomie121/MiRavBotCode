@@ -33,7 +33,7 @@ JOIN_DEADLINE = config["joinDeadline"]
 
 # import all needed helper functions
 from helperFunctions.data_helpers import get_squadron_kickable, get_squadron_players, get_discord_list, get_exemption_list
-from helperFunctions.db import getFullUserData
+from helperFunctions.db import GetFullUserData
 
 
 
@@ -53,18 +53,18 @@ async def setup(bot : commands.Bot):
         logging.info('Generating kicklist...')
         today = datetime.today()
         logging.info('Getting exemption list')
-        exemptionKickList = await get_exemption_list(bot)
+        exemptionKickList = await get_exemption_list()
         logging.info('Gathering squadron player list')
         squadronList = await get_squadron_players()
         logging.info('Gathering kickable squadron player list')
-        kickAble = await get_squadron_kickable(bot, squadronList)
+        kickAble = await get_squadron_kickable(squadronList)
         logging.info('Marking inactivity reasons...')
         for numbera, squadronMember in kickAble.items():
             if squadronMember.get(5, NULL) == NULL:
                 squadronMember[5] = 'Inactivity'
 
         logging.info('Gathering discord member list')
-        discordMemberList = await get_discord_list(bot)
+        discordMemberList = await get_discord_list()
         
         logging.info('Gathered all data... Processing kicklist...')
         filteredMemberList = {}
@@ -109,7 +109,7 @@ async def setup(bot : commands.Bot):
                 if squadronMember[5] == 'Inactivity':
                     logging.info("Checking sqb points for possible for " + squadronMember[0])
                     # now one last check if he has points
-                    message, data = await getFullUserData(bot, squadronMember[0])
+                    message, data = await GetFullUserData(squadronMember[0])
                     # if they don't have any userdata, add them
                     if data == None:
                         finalList[len(finalList)] = squadronMember #

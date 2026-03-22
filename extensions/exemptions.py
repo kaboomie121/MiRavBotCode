@@ -23,7 +23,7 @@ if isDevBot:
 
 # import all needed helper functions
 from helperFunctions.data_helpers import get_exemption_list, get_discord_exemption_list
-from helperFunctions.db import writedata
+from helperFunctions.db import Writedata
 
 @app_commands.guild_only()
 class ExemptionListGroup(app_commands.Group):
@@ -76,7 +76,7 @@ class ExemptionListGroup(app_commands.Group):
         endPrint = ingameusername.lower().strip()
         for exemption in listExemptions:
             endPrint += "§§" + exemption
-        await writedata("Bot", "ExemptionListIGN", endPrint)
+        await Writedata("Bot", "ExemptionListIGN", endPrint)
         await ctx.response.send_message(f'"{ingameusername.strip()}" has been added to the exemption list.', ephemeral=True)
             
     
@@ -96,7 +96,7 @@ class ExemptionListGroup(app_commands.Group):
             if not (username == ingameusername.lower().strip()):
                 finalWritePart += "§§"+ username
 
-        await writedata("Bot", "ExemptionListIGN", finalWritePart[2:])
+        await Writedata("Bot", "ExemptionListIGN", finalWritePart[2:])
             
         await ctx.response.send_message(f'Removed "{ingameusername}" from the permanent exemption list', ephemeral=True)
 

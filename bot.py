@@ -128,7 +128,7 @@ DBCHANNELID = config["DBChannelId"]
   
 # import all needed helper functions
 from helperFunctions.data_helpers import get_squadron_players, get_discord_list, get_discord_exemption_list
-from helperFunctions.db import getFullUserData, writedata, removedatakey, getData
+from helperFunctions.db import SetupDB, GetFullUserData, Writedata, Removedatakey, GetData
 from helperFunctions.helper_functions import IsUserSquadronStaff, IsUserBotOwner
 from helperFunctions.version_checker import checkForUpdate
 from updater import update
@@ -166,11 +166,11 @@ async def nextseason(ctx:  discord.Interaction):
     for messageMain in messages:
         # we check if they have the "HighestSquadronRating" in the message, if so, get the data, set it to 0 and put it in "PreviousSeasonHighestSquadronRating"
         if messageMain.content.find("HighestSquadronRating") != -1:
-            message, data = await getData(client, messageMain.content.split("|")[0], "HighestSquadronRating")
+            message, data = await GetData(messageMain.content.split("|")[0], "HighestSquadronRating")
             if data == None:
                 continue
-            await writedata(client, message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
-            await writedata(client, message.content.split("|")[0], "HighestSquadronRating", "0")
+            await Writedata(message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
+            await Writedata(message.content.split("|")[0], "HighestSquadronRating", "0")
     await ctx.response.edit_message(content="All done! Next season started!.")
  
     
@@ -186,7 +186,7 @@ async def nextseason(ctx:  discord.Interaction):
 async def allsquadronmembers(ctx:  discord.Interaction, sorting: app_commands.Choice[int]):
     await ctx.response.send_message('Gathering all players...', ephemeral=True)
 
-    squadronList = await get_squadron_players(client)
+    squadronList = await get_squadron_players()
     squadronList = list(squadronList.values())
     if sorting.value in [1, 2]:
         # Sorting logic based on list index
@@ -258,9 +258,9 @@ async def verifymembers(ctx:  discord.Interaction):
     usersNoUTC = 0
     totalOtherSquadrons = 0
     totalRepresentingAllies = 0
-    discordMembers = await get_discord_list(client)
-    discordExemptionList = await get_discord_exemption_list(client)
-    squadronMembers = await get_squadron_players(client)
+    discordMembers = await get_discord_list()
+    discordExemptionList = await get_discord_exemption_list()
+    squadronMembers = await get_squadron_players()
     otherSquadronRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1374461613083590667)
     allyRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1346451233543557121)
     memberRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1338270607220932639)
@@ -326,7 +326,7 @@ async def verifymembers(ctx:  discord.Interaction):
 @client.tree.command(description="Check if the username is found in the squadron.")
 async def checkmembername(ctx :  discord.Interaction, name: str):
     found = False
-    squadronMembers = await get_squadron_players(client)
+    squadronMembers = await get_squadron_players()
     squadronMemberFound = ''
     for counterB, squadronMember in squadronMembers.items():
         if name.strip().lower().replace(' ', '') == squadronMember[0].strip().lower().replace(' ', ''):
@@ -449,7 +449,7 @@ class EventView(discord.ui.View):
             except:
                 logging.exception("⚠️ Something went wrong when deleting an event")
             finally:
-                await removedatakey(client, "OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
+                await Removedatakey("OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
 
     @discord.ui.button(label="Attend", style=discord.ButtonStyle.green, custom_id="primarybutton")
     async def button_primary(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -596,7 +596,7 @@ class EventGroup(app_commands.Group):
             whotopingText = "<@&1338270607220932639> and <@&1300018031002652754>" # Both pings
 
         myView.message = await ctx.channel.send(whotopingText, embed=embed, view=myView)
-        await writedata(client,"OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
@@ -843,7 +843,7 @@ class EventGroup(app_commands.Group):
                 
         myView = EventView(embed, ctx.user, hostDate, True, 8, True)
         myView.message = await ctx.channel.send('<@&1338270607220932639>', embed=embed, view=myView)
-        await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
@@ -885,7 +885,7 @@ async def test(ctx : discord.Interaction):
 @client.tree.command(description="statistics such as total utc per type!")
 async def stats(message):
     # Get the list of discord members
-    discord_members = await get_discord_list(client)
+    discord_members = await get_discord_list()
 
     # make a list of all timezones too
     utcList = []
@@ -1053,20 +1053,22 @@ async def task_upload_last_log():
 async def task_write_squadron_highest_SQBrating():
     logging.info(f'Running "task_write_squadron_highest_SQBrating", 6h have passed.')
 
-    squadronPlayers = await get_squadron_players(client)
+    squadronPlayers = await get_squadron_players()
     logging.info(f"Got squadron players: {squadronPlayers}")
 
     for _number_, personData in squadronPlayers.items():
         if int(personData[1]) == 0:
             continue
-        message, squadronRating = await getData(client, str(personData[0]), "HighestSquadronRating")
+        message, squadronRating = await GetData(str(personData[0]), "HighestSquadronRating")
         if squadronRating == None or int(squadronRating) < int(personData[1]):
-            await writedata(client, personData[0], "HighestSquadronRating", personData[1])
+            await Writedata(personData[0], "HighestSquadronRating", personData[1])
 
     logging.info(f'Task "task_write_squadron_highest_SQBrating" done')
 
 @client.event
 async def on_ready():
+    logging.info('Setup DB')
+    await SetupDB(client)
     
     logging.info('Syncing...')
     if not isDevBot:
@@ -1085,7 +1087,7 @@ async def on_ready():
     logging.info(f"Persistent views: {client.persistent_views}")
     if len(client.persistent_views) == 0 and not isDevBot:
         # Check all events, if they are valid
-        _, eventData = await getFullUserData(client, "OngoingEvents")
+        _, eventData = await GetFullUserData("OngoingEvents")
         if not (eventData == None):
             events = str(eventData).split(";")
             for event in events:
@@ -1147,7 +1149,7 @@ async def on_ready():
 
                     # Get user
                     user = oldEmbed.author.name[10:].strip()
-                    discordList = await get_discord_list(client)
+                    discordList = await get_discord_list()
                     found = False
                     logging.info(f"Searching for host of event: \"{oldEmbed.title}\"")
                     for discordUser in discordList:
@@ -1189,14 +1191,14 @@ async def on_ready():
                     # Event can continue!
                     myView = EventView(oldEmbed, user, hostDate, squadronMembersOnly, maxAttendees, reserveList!=None, primaryList, reserveList)
                     myView.message = await message.edit( content=message.content, embed=oldEmbed, view=myView)
-                    #await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+                    #await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
                     myView.id = datetime.today().timestamp()
                     myView.owner = user
                     client.add_view(view=myView, message_id=myView.message.id)
                     logging.info("Event done!")
                 except:
                     logging.error("Something went wrong with loading event:", event, "This event won't be able to restart anymore... Deleting...")
-                    await removedatakey(client, "OngoingEvents", event.split(":")[0])
+                    await Removedatakey("OngoingEvents", event.split(":")[0])
                     logging.info("Deleted")
     logging.info('Done loading events!')
 
