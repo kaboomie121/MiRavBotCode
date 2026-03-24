@@ -57,14 +57,14 @@ async def setup(bot : commands.Bot):
         logging.info('Gathering squadron player list')
         squadronList = await get_squadron_players()
         logging.info('Gathering kickable squadron player list')
-        kickAble = await get_squadron_kickable(squadronList)
+        kickAble = await get_squadron_kickable(bot, squadronList)
         logging.info('Marking inactivity reasons...')
         for numbera, squadronMember in kickAble.items():
             if squadronMember.get(5, NULL) == NULL:
                 squadronMember[5] = 'Inactivity'
 
         logging.info('Gathering discord member list')
-        discordMemberList = await get_discord_list()
+        discordMemberList = await get_discord_list(bot)
         
         logging.info('Gathered all data... Processing kicklist...')
         filteredMemberList = {}

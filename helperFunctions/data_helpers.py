@@ -104,9 +104,9 @@ async def get_exemption_list():
     return listExemptions.split("§§")
 
 
-async def get_squadron_kickable(personList):
+async def get_squadron_kickable(bot : discord.client, personList):
     logging.info('Getting kickable squadron members...')
-    noticeList = await get_notice_list()
+    noticeList = await get_notice_list(bot)
     
     # Convert string to datetime object
     date_format = "%d.%m.%Y"

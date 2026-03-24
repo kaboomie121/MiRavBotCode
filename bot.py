@@ -259,7 +259,7 @@ async def verifymembers(ctx:  discord.Interaction):
     usersNoUTC = 0
     totalOtherSquadrons = 0
     totalRepresentingAllies = 0
-    discordMembers = await get_discord_list()
+    discordMembers = await get_discord_list(client)
     discordExemptionList = await get_discord_exemption_list()
     squadronMembers = await get_squadron_players()
     otherSquadronRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1374461613083590667)
@@ -890,7 +890,7 @@ async def test(ctx : discord.Interaction):
 @client.tree.command(description="statistics such as total utc per type!")
 async def stats(message):
     # Get the list of discord members
-    discord_members = await get_discord_list()
+    discord_members = await get_discord_list(client)
 
     # make a list of all timezones too
     utcList = []
@@ -1154,7 +1154,7 @@ async def on_ready():
 
                     # Get user
                     user = oldEmbed.author.name[10:].strip()
-                    discordList = await get_discord_list()
+                    discordList = await get_discord_list(client)
                     found = False
                     logging.info(f"Searching for host of event: \"{oldEmbed.title}\"")
                     for discordUser in discordList:
