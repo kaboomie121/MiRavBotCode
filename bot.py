@@ -72,22 +72,18 @@ import re
 import asyncio
 from asyncio.windows_events import NULL
 from json import loads
-from operator import truediv
-import string
 from tkinter import CHAR
-from traceback import print_tb
 
 from discord.ext import tasks
 import discord.ext
 import discord.ext.commands
 
+from config_loader import config, isDevBot
 
 base_path = Path(__file__).parent
-config = loads((base_path / "config.json").read_text())
-token = loads((base_path / "token.json").read_text())
+token: dict = loads((base_path / "token.json").read_text())
 versiontxt = (base_path / "version.txt").read_text()
 
-isDevBot = config["devMode"]
 hostUser = token["user"]
 
 if isDevBot:
@@ -1208,12 +1204,17 @@ async def on_ready():
                     logging.info("Deleted")
     logging.info('Done loading events!')
 
-    channel = client.get_channel(LOGGING_CHANNEL)
-    logging.info('Attempting to send previous log to discord')
-    try:
-        await channel.send(file=discord.File(os.path.join("logs", log_files[-2])))
-    except Exception as e:
-        logging.warning(f"Failed to send previous log: {e}")
+    # If dev mode is enabled then don't send logs
+    if not isDevBot:
+        channel = client.get_channel(LOGGING_CHANNEL)
+        logging.info('Attempting to send previous log to discord')
+        try:
+            await channel.send(file=discord.File(os.path.join("logs", log_files[-2])))
+        except Exception as e:
+            logging.warning(f"Failed to send previous log: {e}")
+        # 
+        if not task_upload_last_log.is_running():
+            logging.info(f'Task "{(task_upload_last_log.start()).get_name()}" is running...')
 
 
 
@@ -1221,8 +1222,6 @@ async def on_ready():
     if not task_end_old_events.is_running():
         logging.info(f'Task "{(task_end_old_events.start()).get_name()}" is running...')
 
-    if not task_upload_last_log.is_running():
-        logging.info(f'Task "{(task_upload_last_log.start()).get_name()}" is running...')
           
     if not isDevBot:
         if not task_write_squadron_highest_SQBrating.is_running():

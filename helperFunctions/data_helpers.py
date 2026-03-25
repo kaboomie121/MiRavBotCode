@@ -1,18 +1,15 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing date_helpers.py')
+logging.info(f'Importing {Path(__file__).name}')
+
+import discord
+from config_loader import config, isDevBot
+
 
 import datetime
 from datetime import datetime
-import discord
 import requests
-
-from json import loads
-from pathlib import Path
-base_path = Path(__file__).parent
-config = loads((base_path / "../config.json").read_text())
-
-isDevBot = config["devMode"]
 
 DISCORDGUILD = config["discordGuild"]
 TESTDISCORDGUILD = config["testDiscordGuild"]

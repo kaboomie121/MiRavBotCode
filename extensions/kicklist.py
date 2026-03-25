@@ -1,19 +1,16 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing kicklist.py')
+logging.info(f'Importing {Path(__file__).name}')
+
+from config_loader import config, isDevBot
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from pathlib import Path
-from json import loads
-
 from datetime import datetime, timedelta
 from asyncio.windows_events import NULL
-
-base_path = Path(__file__).parent
-config = loads((base_path / "../config.json").read_text())
 
 SQUADRONMEMBERROLEID = config["squadronMemberRoleId"]
 FIRST_DEADLINE = config["firstDeadline"]
@@ -24,7 +21,6 @@ EXEMPTION_SQ_RATING = config["exemptionSQRating"]
 
 SQUADRONSTAFFID = config["squadronStaffId"]
 
-isDevBot = config["devMode"]
 if isDevBot:
     SQUADRONSTAFFID = 1306031448209363054
 COMMUNITYHOST = config["communityHostRoleId"]

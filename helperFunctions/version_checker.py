@@ -1,6 +1,7 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing version_checker.py')
+logging.info(f'Importing {Path(__file__).name}')
 
 import os
 import requests
@@ -40,45 +41,36 @@ def get_remote_script(fileName : str):
 
             return returnContent
         else:
-            print("\033[31mError:\033[0m No content field in GitHub response.")
+            logging.error("\033[31mError:\033[0m No content field in GitHub response.")
     elif int(response.status_code) == int(403):
         logging.error("Failed to fetch the bot script. Status code: %s. Error reason: TIMED OUT BY GITHUB", response.status_code)
-        print("\033[31mFailed\033[0m to fetch the bot script. Status code:", response.status_code, " Error reason: TIMED OUT BY GITHUB")
     else:
         logging.error("Failed to fetch the bot script. Status code: %s", response.status_code)
-        print("\033[31mFailed\033[0m to fetch the bot script. Status code:", response.status_code)
             
 
     return None
 
 def get_local_version():
     logging.info("Getting local version from file: " + LOCAL_PATH + VERSION_FILENAME)
-    print("Getting local version from file: " + LOCAL_PATH + VERSION_FILENAME)
     if not os.path.exists(LOCAL_PATH + VERSION_FILENAME):
         return ""  # If bot.py doesn't exist yet, treat it as an empty file
     with open(LOCAL_PATH + VERSION_FILENAME, "r", encoding="utf-8") as f:
         return remove_alternate_newlines(f.read().replace('\r', ''))
     
 def checkForUpdate():
-    logging.info("\nChecking for updates...\n")
-    print("\nChecking for updates...\n")
+    logging.info("Checking for updates...")
     remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
     if remote_version:
         local_version = get_local_version()
-        print(f"Remote version: {str(remote_version).strip()}")
         logging.info(f"Remote version: {str(remote_version).strip()}")
-        print(f"Local version: {str(local_version).strip()}")
         logging.info(f"Local version: {str(local_version).strip()}")
         if str(remote_version).strip() != str(local_version).strip():
             logging.info(f"\033[32mUpdate found!\033[0m New version: {str(remote_version).strip()}")
-            print(f"\033[32mUpdate found!\033[0m New version: {str(remote_version).strip()}")
             return True
         else:
             logging.info("\033[33mNo updates found.\033[0m")
-            print("\033[33mNo\033[0m updates found.")
             return False
     elif remote_version == None:
         logging.error("\033[33mERROR:\033[0m remote_version returned None")
-        print("\033[33mERROR:\033[0m remote_version returned None")
         return False
     return False

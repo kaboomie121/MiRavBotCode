@@ -1,12 +1,10 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing db.py')
+logging.info(f'Importing {Path(__file__).name}')
 
 import discord
-from json import loads
-from pathlib import Path
-base_path = Path(__file__).parent
-config = loads((base_path / "../config.json").read_text())
+from config_loader import config
 
 DBCHANNELID = config["DBChannelId"]
 
