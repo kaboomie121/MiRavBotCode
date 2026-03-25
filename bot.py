@@ -1138,7 +1138,7 @@ async def on_ready():
                     try:
                         if oldEmbed.fields[1].value != "":
                             oldReserveListNames = oldEmbed.fields[1].value.split('\n')
-                            logging.info("Raw list reserve: ", oldReserveListNames)
+                            logging.info(f"Raw list reserve: {oldReserveListNames}")
                             if len(oldReserveListNames) > 0:
                                 for value in oldReserveListNames:
                                     logging.info(f"Processing reserve attendee: {value}")
@@ -1182,15 +1182,16 @@ async def on_ready():
                         try:
                             maxAttendees = int(oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2])
                         except:
-                            logging.warning("Something went from extracting an int from: ", oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2], " |  Will assume the max is infinite...")
+                            logging.warning(f"Something went from extracting an int from: {oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2]} |  Will assume the max is infinite...")
                             maxAttendees = -1
-                        logging.info("Max attendees = ", maxAttendees)
+                        logging.info(f"Max attendees = {maxAttendees}")
                         
                     
                     logging.info("Searching for if only squadron members are allowed...")
                     squadronMembersOnly = False
                     if oldEmbed.author.name[0] == "​":
                         # invisible character to notify if it's squadron members only
+                        logging.info(f"It is for squadron members only")
                         squadronMembersOnly = True
 
                     # Event can continue!
@@ -1202,7 +1203,7 @@ async def on_ready():
                     client.add_view(view=myView, message_id=myView.message.id)
                     logging.info("Event done!")
                 except:
-                    logging.error("Something went wrong with loading event:", event, "This event won't be able to restart anymore... Deleting...")
+                    logging.error(f"Something went wrong with loading event: {event} This event won't be able to restart anymore... Deleting...")
                     await Removedatakey("OngoingEvents", event.split(":")[0])
                     logging.info("Deleted")
     logging.info('Done loading events!')
