@@ -4,7 +4,7 @@ import os
 import logging
 from pathlib import Path
 from datetime import timedelta, datetime
-import sys
+import sys, subprocess
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Ensure logs folder exists
@@ -97,8 +97,6 @@ TESTDISCORDGUILD = config["testDiscordGuild"]
 NOTICELIST_CHANNEL = config["noticeListChannelId"]
 SQUADRONMEMBERROLEID = config["squadronMemberRoleId"]
 
-import sys
-sys.stdout.reconfigure(encoding='utf-8')
 import discord 
 from discord import Client, Embed, Interaction, app_commands, ui
 from discord.ext import commands
@@ -145,8 +143,8 @@ async def periodic_update_check():
     logging.info('Running periodic update check...')
     if checkForUpdate():
         logging.info('Update found during periodic check, restarting bot...')
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-        os._exit(0)
+        subprocess.Popen(["python", "bot.py"], cwd=base_path)
+        sys.exit(0)
     else:
         logging.info('No update found during periodic check.')
 

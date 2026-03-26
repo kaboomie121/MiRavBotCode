@@ -4,6 +4,7 @@ import os
 import shutil
 from pathlib import Path
 import datetime
+import subprocess, sys
 
 # put logs folder then log down
 
@@ -111,9 +112,9 @@ def update():
             return
         # All succeeded, start bot and kill myself
         logging.info('Update successful, starting bot...')
-        os.system(f'start cmd /c "cd {base_path} && python bot.py"')
+        subprocess.Popen(["python", "bot.py"], cwd=base_path)
         logging.info('Bot start called, exiting updater...')
-        os._exit(0)
+        sys.exit(0)
     else:
         logging.critical(f'Failed to download update package. Status code: {r.status_code}')
         logging.critical(r.text)
