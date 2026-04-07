@@ -42,43 +42,47 @@ async def get_notice_list(client : discord.Client):
     messages = [message async for message in client.get_channel(NOTICELIST_CHANNEL).history(limit=123)]
     returnList = list()
     for message in messages:
-        messageSplit = message.content.splitlines()
-        name = ''
-        for text in messageSplit[0].split()[1:]:
-            name += text + ' '
-        today = round(datetime.now().timestamp()-1)
-        # no dates
-        if FindFirstIndex(messageSplit[2], '<') == -1:
-            # Alert to check list
-            returnList.append([name.strip().replace(' ', '').lower(), 2])
-        # Two dates
-        elif messageSplit[2].count('<') == 2:
-            index = FindFirstIndex(messageSplit[2], '<') +3
-            secondIndex = FindFirstIndex(messageSplit[2], '>')-2
-            # if it is in the future, skip and don't alert as he's not needed yet
-            if today < int(messageSplit[2][index:secondIndex]):
-                continue
-            
-            index = FindFirstIndex(messageSplit[2][secondIndex:], '<') + secondIndex+3
-            secondIndex = FindFirstIndex(messageSplit[2][index:], '>') + index-2
-            # if end date is in the past, skip
-            if today > int(messageSplit[2][index:secondIndex]):
-                returnList.append([name.strip().replace(' ', '').lower(), 1])
-                continue
-            returnList.append([name.strip().replace(' ', '').lower(), 0])
-        # One dates
-        elif messageSplit[2].count('<') == 1:
-            index = FindFirstIndex(messageSplit[2], '<')+3
-            secondIndex = FindFirstIndex(messageSplit[2], '>')-2
-            # if end date is in the future, add
-            if today < int(messageSplit[2][index:secondIndex]):
+        try:
+            messageSplit = message.content.splitlines()
+            name = ''
+            for text in messageSplit[0].split()[1:]:
+                name += text + ' '
+            today = round(datetime.now().timestamp()-1)
+            # no dates
+            if FindFirstIndex(messageSplit[2], '<') == -1:
+                # Alert to check list
+                returnList.append([name.strip().replace(' ', '').lower(), 2])
+            # Two dates
+            elif messageSplit[2].count('<') == 2:
+                index = FindFirstIndex(messageSplit[2], '<') +3
+                secondIndex = FindFirstIndex(messageSplit[2], '>')-2
+                # if it is in the future, skip and don't alert as he's not needed yet
+                if today < int(messageSplit[2][index:secondIndex]):
+                    continue
+                
+                index = FindFirstIndex(messageSplit[2][secondIndex:], '<') + secondIndex+3
+                secondIndex = FindFirstIndex(messageSplit[2][index:], '>') + index-2
+                # if end date is in the past, skip
+                if today > int(messageSplit[2][index:secondIndex]):
+                    returnList.append([name.strip().replace(' ', '').lower(), 1])
+                    continue
                 returnList.append([name.strip().replace(' ', '').lower(), 0])
-            # if end date is in the the past then alert he's still on the list
+            # One dates
+            elif messageSplit[2].count('<') == 1:
+                index = FindFirstIndex(messageSplit[2], '<')+3
+                secondIndex = FindFirstIndex(messageSplit[2], '>')-2
+                # if end date is in the future, add
+                if today < int(messageSplit[2][index:secondIndex]):
+                    returnList.append([name.strip().replace(' ', '').lower(), 0])
+                # if end date is in the the past then alert he's still on the list
+                else:
+                    returnList.append([name.strip().replace(' ', '').lower(), 1])
             else:
+                # Alert someone is on the list
                 returnList.append([name.strip().replace(' ', '').lower(), 1])
-        else:
-            # Alert someone is on the list
-            returnList.append([name.strip().replace(' ', '').lower(), 1])
+        except:
+            # nothing ig
+            continue
 
     return returnList
     
