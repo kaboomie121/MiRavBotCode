@@ -287,7 +287,7 @@ async def verifymembers(ctx:  discord.Interaction):
             continue
         for counterB, squadronMember in squadronMembers.items():
             if (discordMember.nick != None):
-                logging.debug(f'Comparing with squadron member: {squadronMember.nick}')
+                logging.debug(f'Comparing with squadron member: {squadronMember[0]}')
                 if discordMember.nick[:discordMember.nick.find('[')].replace(' ', '').strip().lower() == squadronMember[0].strip().lower():
                     logging.debug(f'Member {discordMember.nick} found in squadron list as {squadronMember[0]}, marking as found.')
                     found = True
