@@ -542,7 +542,7 @@ class EventGroup(app_commands.Group):
             return
         
         squadronmembersonly = True
-        if whotoping != 0:
+        if whotoping.value != 0:
             squadronmembersonly = False
         await ctx.response.send_message(content='✅ Starting event!', ephemeral=True)
 
@@ -583,9 +583,9 @@ class EventGroup(app_commands.Group):
         
         myView = EventView(embed, ctx.user, hostDate, squadronmembersonly, maxmainattendees, hasreservelist)
 
-        if whotoping == 0:
+        if whotoping.value == 0:
             whotopingText = "<@&1338270607220932639>" # Squadron members
-        elif whotoping == 1:
+        elif whotoping.value == 1:
             whotopingText = "<@&1300018031002652754>" # Events ping
         else:
             whotopingText = "<@&1338270607220932639> and <@&1300018031002652754>" # Both pings
