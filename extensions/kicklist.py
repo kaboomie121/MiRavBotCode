@@ -147,13 +147,16 @@ async def GetKicklistVariantDidntPlayLastSeason(exemptionKickList, squadronList)
     finalList = dict()
     # Now check and add to a final list
     for _, member in peopleToCheck.items():
-        member[0]
         hasPointsThisOrLastSeason = False
         message, data = await GetFullUserData(member[0])
         # if they don't have any userdata, add them
         if data == None:
+            logging.info(f"Adding {member[0]} to kick list due to no squadron points. He joined {(datetime.now() - member[4]).days} days ago")
+            if (datetime.now() - member[4]).days < 7:
+                member[5] = "\u001b[35mJoined less than one week ago\u001b[0m"
+            elif (datetime.now() - member[4]).days < 14:
+                member[5] = "\u001b[35mJoined less than two weeks ago\u001b[0m"
             finalList[len(finalList)] = member #
-            logging.info("Adding " + member[0] + " to kick list due to no squadron points.")
             continue
 
         # check if they have previous season points...
@@ -161,15 +164,25 @@ async def GetKicklistVariantDidntPlayLastSeason(exemptionKickList, squadronList)
             logging.info("PreviousSeasonHighestSquadronRating: " + data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1].split(";")[0])
             if data[data.find("PreviousSeasonHighestSquadronRating"):].split(":")[1][0] != "0":
                 hasPointsThisOrLastSeason = True
+                
+            dataPastPrevious = data[data[data.find("PreviousSeasonHighestSquadronRating"):].find(":"):]
+            if dataPastPrevious.find("HighestSquadronRating") != -1:
+                logging.info("HighestSquadronRating: " + dataPastPrevious[dataPastPrevious.find("HighestSquadronRating"):].split(":")[1].split(";")[0])
+                if dataPastPrevious[dataPastPrevious.find("HighestSquadronRating"):].split(":")[1][0] != "0":
+                    hasPointsThisOrLastSeason = True
         # check if they have current season points
-        if data.find("HighestSquadronRating") != -1:
+        elif data.find("HighestSquadronRating") != -1:
             logging.info("HighestSquadronRating: " + data[data.find("HighestSquadronRating"):].split(":")[1].split(";")[0])
             if data[data.find("HighestSquadronRating"):].split(":")[1][0] != "0":
                 hasPointsThisOrLastSeason = True
 
         if not hasPointsThisOrLastSeason:
+            logging.info(f"Adding {member[0]} to kick list due to no squadron points. He joined {(datetime.now() - member[4]).days} days ago")
+            if (datetime.now() - member[4]).days < 7:
+                member[5] = "\u001b[35mJoined less than one week ago\u001b[0m"
+            elif (datetime.now() - member[4]).days < 14:
+                member[5] = "\u001b[35mJoined less than two weeks ago\u001b[0m"
             finalList[len(finalList)] = member #
-            logging.info("Adding " + member[0] + " to kick list due to no squadron points.")
         else:
             # they have points!
             logging.info(member[0] + " has points.")
@@ -205,7 +218,8 @@ async def setup(bot : commands.Bot):
             # If it's didn't play last season, then only do that one
             elif type.value == 3:
                 finalSortedList = await GetKicklistVariantDidntPlayLastSeason(exemptionKickList, squadronList)
-        except:
+        except Exception as e:
+            logging.error(f"Error occured while processing kicklist, exception: {e}")
             finalSortedList = dict()
             finalSortedList[0] = dict()
             finalSortedList[0][0] = "Error occured when generating list"
