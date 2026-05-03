@@ -128,6 +128,8 @@ from helperFunctions.helper_functions import IsUserSquadronStaff, IsUserBotOwner
 from helperFunctions.version_checker import checkForUpdate
 from updater import update
 
+from helperFunctions.SQB_battle_rating import GetBRRightNow
+
 
 # check for updates, if there are any, update the bot script, only run if not in dev mode and restart the bot
 if not isDevBot:
@@ -781,22 +783,34 @@ class EventGroup(app_commands.Group):
         
 
     @app_commands.describe(
-    battlerating="Choose the battle rating (e.g., 6.7, 7.3, 8.0)",
+    battlerating_override="Choose the battle rating (e.g., 6.7, 7.3, 8.0)",
     hour="Hour of the event in 24 hour notation (0-24), in your local time, the bot will automatically convert it",
     minute="Minute of the event 0-59"
     )
     @app_commands.command(description="A command to host SQB at a specified BR and hour")
-    async def squadronbattle(self, ctx : discord.Interaction, battlerating : str, hour : int, minute : int):
+    async def squadronbattle(self, ctx : discord.Interaction, hour : int, minute : int, battlerating_override : str = "none"):
         if not(isDevBot) and ((not IsUserSquadronStaff(ctx.user) and ctx.user.get_role(COMMUNITYHOST) == None) and not(ctx.user.id == 259644962876948480 or ctx.user.id == 490216540331966485)):
             await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
             return
-        if len(battlerating.strip()) == 0:
-            await ctx.response.send_message('⚠️ Battle rating cannot be empty', ephemeral=True)
-            return
-        pattern = r"^(?:[0-9]|1[0-9]|20)\.(0|3|7)$"
-        if not bool(re.fullmatch(pattern, battlerating)):
-            await ctx.response.send_message('⚠️ Battle rating is incorrect! Please verify! It can only be numbers 0.0 to 20.7 with .0, .3, .7', ephemeral=True)
-            return
+        
+        if battlerating_override != "none":
+            # if overriden check if allowed
+            if len(battlerating_override.strip()) == 0:
+                await ctx.response.send_message('⚠️ Battle rating cannot be empty', ephemeral=True)
+                return
+            pattern = r"^(?:[0-9]|1[0-9]|20)\.(0|3|7)$"
+            if not bool(re.fullmatch(pattern, battlerating_override)): #
+                await ctx.response.send_message('⚠️ Battle rating is incorrect! Please verify! It can only be numbers 0.0 to 20.7 with .0, .3, .7', ephemeral=True)
+                return
+            battlerating = battlerating_override
+        else:
+            battlerating = GetBRRightNow()
+            if battlerating == None:
+                await ctx.response.send_message('⚠️ An error has occured while getting the current BR... Use the battlerating override to start an event')
+                return
+
+            
+            
         if hour == 24:
             hour = 0
         elif not (0 <= hour <= 24):
@@ -811,6 +825,8 @@ class EventGroup(app_commands.Group):
             return
         
         await ctx.response.send_message('✅ Starting squadron battles!', ephemeral=True)
+
+
 
         time = ctx.user.nick[ctx.user.nick.find('[')+4:len(ctx.user.nick)-1]
         today = datetime.today()
