@@ -378,14 +378,17 @@ async def WriteAttendanceLists(self, embed, printReserveList):
             embed.set_field_at(1, name=f'{len(self.reserve)} Reserves:', value=printedListReserve, inline=True)
 
 class EventView(discord.ui.View):
-    def __init__(self, embed : Embed, host, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
+    def __init__(self, embed : Embed, host : discord.member.Member, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
                  primaryList = None, reserveList = None):
         super().__init__(timeout=None)
 
         if primaryList != None:
             self.primary = primaryList
         else:
-            self.primary = [host]
+            if host.bot:
+                self.primary = []
+            else:
+                self.primary = [host]
 
         if reserveList != None:
             self.reserve = reserveList
@@ -991,6 +994,48 @@ async def warthunderguessr(ctx: discord.Interaction, difficulty: app_commands.Ch
     view.owner = ctx.user
     
 
+# Will start a sqb event automatically, one at 6pm UTC and 
+@tasks.loop(minutes=1)
+async def task_start_squadron_battle_event():
+    logging.info(f'Checking if we should start an event, 1m passed')
+    timeNow = datetime.now()
+
+    if not timeNow.minute == 00:
+        logging.info(f'We don\'t have to, minute isn\'t not at XX:00')
+        return
+
+    if not(timeNow.hour == 16 or timeNow.hour == 0):
+        logging.info(f'We don\'t have to, hour is at {timeNow.hour}:00')
+        return
+    
+    logging.info("Starting auto event!")
+    # EU host
+    hostDate = timeNow + timedelta(hours=4)
+    
+    embed = discord.Embed(color=int("696969", 16), title=f'**Squadron Battles [MAX BR {GetBRRightNow()}]**\n',
+                        description=f'<t:{int(hostDate.timestamp())}:R> | <t:{int(hostDate.timestamp())}:t>\n' +
+                        '**This is a self hosted event, "host" will be decided at the time!**\n' +
+                        '**Min. required checks: 8**\n' +
+                        '-# - Don\'t fake check, this will result in punishments!\n' +
+                        '-# - Make sure you check on time!\n' +
+                        '-# - <:MidnightRavens:1233397037110919220> Make sure your vehicles are spaded!\n')
+    
+    embed.set_author(name=f'​Hosted by {client.user.name}', icon_url=client.user.display_avatar)
+    
+    embed.add_field(name='0 Attendees (max 8):', value=f'', inline=True)
+    embed.add_field(name='0 Reserves:', value=f'', inline=True)
+    
+    channelID = 1292920931479715885
+
+    myView = EventView(embed, client.user, hostDate, True, 8, True)
+    myView.message = await client.get_channel(channelID).send('<@&1338270607220932639>', embed=embed, view=myView)
+    if not isDevBot:
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+    myView.id = hostDate.timestamp()
+    myView.owner = client.user
+    client.add_view(view=myView, message_id=myView.message.id)
+    
+
 # Checks if 6hours have passed since the start of the event, if so, stop the event.
 @tasks.loop(minutes=1)
 async def task_end_old_events():
@@ -1235,9 +1280,11 @@ async def on_ready():
     logging.info(f'Attempting to start tasks...')
     if not task_end_old_events.is_running():
         logging.info(f'Task "{(task_end_old_events.start()).get_name()}" is running...')
-
+    
           
     if not isDevBot:
+        if not task_start_squadron_battle_event.is_running():
+            logging.info(f'Task "{(task_start_squadron_battle_event.start()).get_name()}" is running...')
         if not task_write_squadron_highest_SQBrating.is_running():
             logging.info(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
             
