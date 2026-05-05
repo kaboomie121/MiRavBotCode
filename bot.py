@@ -1004,13 +1004,13 @@ async def task_start_squadron_battle_event():
         logging.info(f'We don\'t have to, minute isn\'t not at XX:00')
         return
 
-    if not(timeNow.hour == 16 or timeNow.hour == 0):
+    if not(timeNow.hour == 17 or timeNow.hour == 1):
         logging.info(f'We don\'t have to, hour is at {timeNow.hour}:00')
         return
     
     logging.info("Starting auto event!")
     # EU host
-    hostDate = timeNow + timedelta(hours=4)
+    hostDate = timeNow + timedelta(hours=3)
     
     embed = discord.Embed(color=int("696969", 16), title=f'**Squadron Battles [MAX BR {GetBRRightNow()}]**\n',
                         description=f'<t:{int(hostDate.timestamp())}:R> | <t:{int(hostDate.timestamp())}:t>\n' +
@@ -1025,7 +1025,7 @@ async def task_start_squadron_battle_event():
     embed.add_field(name='0 Attendees (max 8):', value=f'', inline=True)
     embed.add_field(name='0 Reserves:', value=f'', inline=True)
     
-    channelID = 1292920931479715885
+    channelID = 1195674602119106652
 
     myView = EventView(embed, client.user, hostDate, True, 8, True)
     myView.message = await client.get_channel(channelID).send('<@&1338270607220932639>', embed=embed, view=myView)
