@@ -1004,13 +1004,13 @@ async def task_start_squadron_battle_event():
         logging.info(f'We don\'t have to, minute isn\'t not at XX:00')
         return
 
-    if not(timeNow.hour == 14):
+    if not(timeNow.hour == 18):
         logging.info(f'We don\'t have to, hour is at {timeNow.hour}:00')
         return
     
     logging.info("Starting auto event!")
     # EU host
-    hostDate = timeNow + timedelta(hours=6)
+    hostDate = timeNow + timedelta(hours=2)
     
     embed = discord.Embed(color=int("696969", 16), title=f'**Squadron Battles [MAX BR {GetBRRightNow()}]**\n',
                         description=f'<t:{int(hostDate.timestamp())}:R> | <t:{int(hostDate.timestamp())}:t>\n' +
