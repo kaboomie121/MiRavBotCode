@@ -7,6 +7,7 @@ import requests
 from datetime import timedelta
 from datetime import datetime as datetime
 
+savedListOfBrs = list()
 
 def GetCurrentSquadronSchedule():
     """
@@ -41,12 +42,13 @@ def GetCurrentSquadronSchedule():
 
                 listEncodedBrList.append(processedItem)
             logging.info(listEncodedBrList)
+            global savedListOfBrs = listEncodedBrList
             return listEncodedBrList
         logging.error("REQUEST HAD AN ERROR")
-        return None
+        return savedListOfBrs
     except Exception as e:
         logging.error(f"Got an exception: {e}")
-        return None
+        return savedListOfBrs
 
 def GetBRRightNow():
     """
