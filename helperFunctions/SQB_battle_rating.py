@@ -13,6 +13,7 @@ def GetCurrentSquadronSchedule():
     """
     returns either NONE or a dictionary of the combined: "BR"; "StartDate"; "EndDate"
     """
+    global savedListOfBrs
     try:
         result = requests.get("https://forum.warthunder.com/t/season-schedule-for-squadron-battles/4446")
         if result.status_code == 200:
@@ -42,7 +43,7 @@ def GetCurrentSquadronSchedule():
 
                 listEncodedBrList.append(processedItem)
             logging.info(listEncodedBrList)
-            global savedListOfBrs = listEncodedBrList
+            savedListOfBrs = listEncodedBrList
             return listEncodedBrList
         logging.error("REQUEST HAD AN ERROR")
         return savedListOfBrs
