@@ -77,6 +77,8 @@ else:
     logging.info(f'Importing {Path(__file__).name}')
 
 import asyncio
+import json
+import os
 
 
 DB_BASE_LOCATION = Path("database")
@@ -84,7 +86,27 @@ DB_BASE_LOCATION.mkdir(exist_ok=True)
 DB_BASE_LOCATION = str(DB_BASE_LOCATION.absolute())
 
 async def main():
-    dblocation = f"{DB_BASE_LOCATION}\\test.sqlite"
+    db.SetupDB()
+
+
+
+    print(db.Config.GetFullConfig("MiRav"))
+    print(db.Config.GetConfig("MiRav", "TestKey1"))
+
+    db.Config.AddConfig("MiRav", "TestKey1", "TestData1")
+    db.Config.AddConfig("MiRav", "TestKey2", "TestData2")
+
+
+    print(db.Config.GetFullConfig("MiRav"))
+    print(db.Config.GetConfig("MiRav", "TestKey1"))
+
+
+
+    dblocation = f"{DB_BASE_LOCATION}\\test\\database.sqlite"
+
+    # Create folder if it doesn't exist
+    os.makedirs(f"{DB_BASE_LOCATION}\\test", exist_ok=True)
+
     with sqlite3.connect(dblocation) as conn:
             cursor = conn.cursor()
             conn.execute("""
@@ -100,12 +122,18 @@ async def main():
             conn.execute("""
                 DROP TABLE IF EXISTS SquadronMemberData
             """)
-    db.SetupDB()
     
     db.SquadronMemberData.AddSquadronMember("test", 1, "kaboomie121", 1500, 3600, datetime.now())
     db.SquadronMemberData.AddSquadronMember("test", 1, "notJesse", 200, 3600, datetime.now())
     db.SquadronMemberData.UpdateSquadronMember("test", "kaboomie121") 
     db.SquadronMemberData.UpdateSquadronMember("test", "kaboomie121", sqbPoints = 5)
+
+    db.Exemptions.AddUser("test", "kaboomie121", 5123123123)
+    db.Exemptions.AddUser("test", "kaboomie121", 11)
+    db.Exemptions.AddUser("test", "kaboomie121", 9999)
+    db.Exemptions.RemoveUser("test", "kaboomie121", 5123123123)
+    db.Exemptions.RemoveUser("test", discordID=11)
+    db.Exemptions.GetAll("test")
     
 
 import sqlite3 
@@ -113,22 +141,68 @@ from sqlite3 import Error
 
 class db:
     """Class that manages all the data to and from the databases"""
+    @staticmethod
     def SetupDB():
         logging.info(f"Setup db called for base location: {DB_BASE_LOCATION}")
         return
-    
+
     class Config:
         """
+        Config file that holds all the config data\n
         """
+        @staticmethod
+        def AddConfig(serverID: str, key: str, data):
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\config.json"
+            logging.info(f"{__class__.__name__} Adding ServerID: {serverID} Key: {key} with data {data}")
 
+            # Create folder if it doesn't exist
+            os.makedirs(f"{DB_BASE_LOCATION}\\{serverID}", exist_ok=True)
+
+            # Load existing config if it exists
+            if os.path.exists(dblocation):
+                with open(dblocation, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+            else:
+                config = {}
+                logging.info(f"{__class__.__name__} No data was found, making new")
+
+            # Add or update the key
+            config[key] = data
+
+            # Save back to file
+            with open(dblocation, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=4)
+
+
+        @staticmethod
+        def GetConfig(serverID: str, key: str):
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\config.json"
+            logging.info(f"{__class__.__name__} Getting config for ServerID: {serverID} and Key: {key}")
+
+            if not os.path.exists(dblocation):
+                return None
+
+            with open(dblocation, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return config.get(key)
+
+
+        @staticmethod
+        def GetFullConfig(serverID: str):
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\config.json"
+            logging.info(f"{__class__.__name__} Getting FULL config file for ServerID: {serverID}")
+
+            if not os.path.exists(dblocation):
+                return None
+
+            with open(dblocation, "r", encoding="utf-8") as f:
+                return json.load(f)
     
     class Events:
         """
         Data in the form of\n
         """
 
-
-    
     class SquadronMemberData:
         """
         Data in the form of\n
@@ -142,7 +216,7 @@ class db:
         """
         @staticmethod
         def GetAll(serverID : str):
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
             logging.info(f"{__class__.__name__} Getting all squadron-member data for {serverID}")
             with sqlite3.connect(dblocation) as conn:
@@ -159,7 +233,7 @@ class db:
         
         @staticmethod
         def GetUser(serverID : str, usernameIngame : str):
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
             logging.info(f"{__class__.__name__} Getting all squadron-member data for {serverID}")
             with sqlite3.connect(dblocation) as conn:
@@ -177,8 +251,11 @@ class db:
         
         @staticmethod
         def AddSquadronMember(serverID : str, gaijinID : str , usernameIngame : str, sqbPoints : int, activity : int, joinDate : datetime) -> None:
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
+            # Create folder if it doesn't exist
+            os.makedirs(f"{DB_BASE_LOCATION}\\{serverID}", exist_ok=True)
+
             logging.info(f"{__class__.__name__} Adding squadron member named {usernameIngame} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
                 conn.execute(f"""
@@ -198,8 +275,11 @@ class db:
         
         @staticmethod
         def UpdateSquadronMember(serverID : str, usernameIngame : str, sqbPoints : int = None, previousSeasonSqbPoints : int = None, activity : int = None) -> None:
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
+            # Create folder if it doesn't exist
+            os.makedirs(f"{DB_BASE_LOCATION}\\{serverID}", exist_ok=True)
+
             logging.info(f"{__class__.__name__} Updating squadron member named {usernameIngame} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
                 cursor = conn.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{__class__.__name__}'")
@@ -235,8 +315,8 @@ class db:
 
         @staticmethod
         def RemoveSquadronMember(serverID : str, usernameIngame : str = None) -> None:
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
-            
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
+
             logging.info(f"{__class__.__name__} Deleting IGN: {usernameIngame} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
                 cursor = conn.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{__class__.__name__}'")
@@ -259,7 +339,7 @@ class db:
         """
         @staticmethod
         def GetAll(serverID : str):
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
             logging.info(f"{__class__.__name__} Getting all {__class__.__name__} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
@@ -276,8 +356,11 @@ class db:
         
         @staticmethod
         def AddUser(serverID : str, usernameIngame : str, discordID : int) -> None:
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
+            # Create folder if it doesn't exist
+            os.makedirs(f"{DB_BASE_LOCATION}\\{serverID}", exist_ok=True)
+
             logging.info(f"{__class__.__name__} Adding IGN: {usernameIngame} and discID: {discordID} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
                 conn.execute(f"""
@@ -292,7 +375,7 @@ class db:
         
         @staticmethod
         def RemoveUser(serverID : str, usernameIngame : str = None, discordID : int = None) -> None:
-            dblocation = f"{DB_BASE_LOCATION}\\{serverID}.sqlite"
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\database.sqlite"
             
             logging.info(f"{__class__.__name__} Deleting IGN: {usernameIngame} and/or discID: {discordID} for {serverID}")
             with sqlite3.connect(dblocation) as conn:
