@@ -4,9 +4,10 @@ public class DiscordGuild
 {
     public string Id { get; set; }
     public string Name { get; set; }
-    public string Permissions { get; set; } // Discord returns this as a string-encoded bitwise integer
+    public string Permissions { get; set; }
     public string? Icon { get; set; }
     public bool IsBotPresent { get; set; }
+    public bool CanManageServer { get; set; }
 
     // Converts the hash to a valid Discord CDN URL
     public string IconUrl => string.IsNullOrEmpty(Icon) 

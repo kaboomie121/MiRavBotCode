@@ -42,17 +42,16 @@ public class DashboardController : Controller
         var botGuildIds = botGuilds.Select(g => g.Id).ToHashSet();
 
         // Filter for Manage Server permissions and cross-reference with bot
-        var manageableGuilds = allGuilds.Where(g => long.TryParse(g.Permissions, out var p) && (p & 0x20) == 0x20).ToList();
-
-        foreach (var guild in manageableGuilds)
+        foreach (var guild in allGuilds)
         {
             guild.IsBotPresent = botGuildIds.Contains(guild.Id);
+            guild.CanManageServer = long.TryParse(guild.Permissions, out var p) && (p & 0x20) == 0x20;
         }
 
         var viewModel = new DashboardViewModel
         {
-            UserGuilds = manageableGuilds,
-            SelectedGuild = manageableGuilds.FirstOrDefault(g => g.Id == guildId),
+            UserGuilds = allGuilds,
+            SelectedGuild = allGuilds.FirstOrDefault(g => g.Id == guildId),
             ClientId = clientId
         };
 
