@@ -4,30 +4,40 @@ import os
 import logging
 from pathlib import Path
 from datetime import timedelta, datetime
-import sys
+import sys, subprocess
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Ensure logs folder exists
 Path("logs").mkdir(exist_ok=True)
 
+# Set the one of the following levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+loggingLevel = logging.INFO
+# Set max amount of logs
+MAX_LOGS_AMOUNT = 5
+
 # Create a logger
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # minimum level
-
-# File handler
-log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
-file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-
-# Console handler
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.INFO)
+logger.setLevel(loggingLevel)
 
 # Formatter (used by both handlers)
 formatter = logging.Formatter(
     '%(asctime)s - %(relativeCreated)d - %(name)s - %(levelname)s - %(filename)s | %(funcName)s:%(lineno)d - %(message)s'
 )
-file_handler.setFormatter(formatter)
+
+# File handler
+def create_file_handler():
+    log_file = Path(f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
+    handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+    handler.setLevel(loggingLevel)
+    handler.setFormatter(formatter)
+    return handler
+
+file_handler = create_file_handler()
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(loggingLevel)
+
 console_handler.setFormatter(formatter)
 
 # Add handlers to logger
@@ -35,19 +45,26 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 # if there are more than 5 log files, delete the oldest one and not _updater logs
-log_files = [f for f in os.listdir('logs') if f.endswith('.log') and not f.endswith('_updater.log')]
-log_files.sort()
-while True:
-    if len(log_files) > 5:
-        logging.info(f'More than 5 log ({len(log_files)}) files found, deleting oldest log file: {log_files[0]}')
-        try:
-            os.remove(os.path.join('logs', log_files[0]))
-        except Exception as e:
-            logging.critical(f'Breaking operation; Error while deleting log file: {e}')
+def RemoveOldLogs():
+    logging.info(f"Checking to delete logs if there are more than {MAX_LOGS_AMOUNT} logs")
+    global log_files
+    log_files = [f for f in os.listdir('logs') if f.endswith('.log') and not f.endswith('_updater.log')]
+    log_files.sort()
+    logging.debug(f'We have {len(log_files)} / {MAX_LOGS_AMOUNT} logs')
+    while True:
+        if len(log_files) > MAX_LOGS_AMOUNT:
+            logging.info(f'More than {MAX_LOGS_AMOUNT} log ({len(log_files)}) files found, deleting oldest log file: {log_files[0]}')
+            try:
+                logging.debug(f'Attempting to remove: {os.path.join('logs', log_files[0])}')
+                os.remove(os.path.join('logs', log_files[0]))
+            except Exception as e:
+                logging.critical(f'Breaking operation; Error while deleting log file: {e}')
+                break
+            log_files.pop(0)
+        else:
             break
-        log_files.pop(0)
-    else:
-        break
+
+RemoveOldLogs()
 
 logging.info('Logging INIT done, starting bot.py')
 # Configureable
@@ -55,21 +72,18 @@ import re
 import asyncio
 from asyncio.windows_events import NULL
 from json import loads
-from operator import truediv
-import string
 from tkinter import CHAR
-from traceback import print_tb
 
 from discord.ext import tasks
 import discord.ext
 import discord.ext.commands
 
+from config_loader import config, isDevBot
 
 base_path = Path(__file__).parent
-config = loads((base_path / "config.json").read_text())
-token = loads((base_path / "token.json").read_text())
+token: dict = loads((base_path / "token.json").read_text())
+versiontxt = (base_path / "version.txt").read_text()
 
-isDevBot = config["devMode"]
 hostUser = token["user"]
 
 if isDevBot:
@@ -77,13 +91,12 @@ if isDevBot:
 else:
     TOKEN = token["token"]
 
+LOGGING_CHANNEL = config["loggingChannelId"]
 DISCORDGUILD = config["discordGuild"]
 TESTDISCORDGUILD = config["testDiscordGuild"]
 NOTICELIST_CHANNEL = config["noticeListChannelId"]
 SQUADRONMEMBERROLEID = config["squadronMemberRoleId"]
 
-import sys
-sys.stdout.reconfigure(encoding='utf-8')
 import discord 
 from discord import Client, Embed, Interaction, app_commands, ui
 from discord.ext import commands
@@ -110,10 +123,12 @@ DBCHANNELID = config["DBChannelId"]
   
 # import all needed helper functions
 from helperFunctions.data_helpers import get_squadron_players, get_discord_list, get_discord_exemption_list
-from helperFunctions.db import getFullUserData, writedata, removedatakey, getData
+from helperFunctions.db import SetupDB, GetFullUserData, Writedata, Removedatakey, GetData
 from helperFunctions.helper_functions import IsUserSquadronStaff, IsUserBotOwner
 from helperFunctions.version_checker import checkForUpdate
 from updater import update
+
+from helperFunctions.SQB_battle_rating import GetBRRightNow
 
 
 # check for updates, if there are any, update the bot script, only run if not in dev mode and restart the bot
@@ -130,8 +145,8 @@ async def periodic_update_check():
     logging.info('Running periodic update check...')
     if checkForUpdate():
         logging.info('Update found during periodic check, restarting bot...')
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-        os._exit(0)
+        subprocess.Popen(["python", "bot.py"], cwd=base_path)
+        sys.exit(0)
     else:
         logging.info('No update found during periodic check.')
 
@@ -148,11 +163,11 @@ async def nextseason(ctx:  discord.Interaction):
     for messageMain in messages:
         # we check if they have the "HighestSquadronRating" in the message, if so, get the data, set it to 0 and put it in "PreviousSeasonHighestSquadronRating"
         if messageMain.content.find("HighestSquadronRating") != -1:
-            message, data = await getData(client, messageMain.content.split("|")[0], "HighestSquadronRating")
+            message, data = await GetData(messageMain.content.split("|")[0], "HighestSquadronRating")
             if data == None:
                 continue
-            await writedata(client, message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
-            await writedata(client, message.content.split("|")[0], "HighestSquadronRating", "0")
+            await Writedata(message.content.split("|")[0], "PreviousSeasonHighestSquadronRating", data)
+            await Writedata(message.content.split("|")[0], "HighestSquadronRating", "0")
     await ctx.response.edit_message(content="All done! Next season started!.")
  
     
@@ -240,7 +255,7 @@ async def verifymembers(ctx:  discord.Interaction):
     usersNoUTC = 0
     totalOtherSquadrons = 0
     totalRepresentingAllies = 0
-    discordMembers = await get_discord_list()
+    discordMembers = await get_discord_list(client)
     discordExemptionList = await get_discord_exemption_list()
     squadronMembers = await get_squadron_players()
     otherSquadronRole = discord.utils.get(client.get_guild(DISCORDGUILD).roles, id=1374461613083590667)
@@ -274,7 +289,7 @@ async def verifymembers(ctx:  discord.Interaction):
             continue
         for counterB, squadronMember in squadronMembers.items():
             if (discordMember.nick != None):
-                logging.debug(f'Comparing with squadron member: {squadronMember.nick}')
+                logging.debug(f'Comparing with squadron member: {squadronMember[0]}')
                 if discordMember.nick[:discordMember.nick.find('[')].replace(' ', '').strip().lower() == squadronMember[0].strip().lower():
                     logging.debug(f'Member {discordMember.nick} found in squadron list as {squadronMember[0]}, marking as found.')
                     found = True
@@ -363,14 +378,17 @@ async def WriteAttendanceLists(self, embed, printReserveList):
             embed.set_field_at(1, name=f'{len(self.reserve)} Reserves:', value=printedListReserve, inline=True)
 
 class EventView(discord.ui.View):
-    def __init__(self, embed : Embed, host, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
+    def __init__(self, embed : Embed, host : discord.member.Member, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
                  primaryList = None, reserveList = None):
         super().__init__(timeout=None)
 
         if primaryList != None:
             self.primary = primaryList
         else:
-            self.primary = [host]
+            if host.bot:
+                self.primary = []
+            else:
+                self.primary = [host]
 
         if reserveList != None:
             self.reserve = reserveList
@@ -431,7 +449,7 @@ class EventView(discord.ui.View):
             except:
                 logging.exception("⚠️ Something went wrong when deleting an event")
             finally:
-                await removedatakey(client, "OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
+                await Removedatakey("OngoingEvents", f"{self.message.channel.id}-{self.message.id}")
 
     @discord.ui.button(label="Attend", style=discord.ButtonStyle.green, custom_id="primarybutton")
     async def button_primary(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -529,7 +547,7 @@ class EventGroup(app_commands.Group):
             return
         
         squadronmembersonly = True
-        if whotoping != 0:
+        if whotoping.value != 0:
             squadronmembersonly = False
         await ctx.response.send_message(content='✅ Starting event!', ephemeral=True)
 
@@ -570,15 +588,15 @@ class EventGroup(app_commands.Group):
         
         myView = EventView(embed, ctx.user, hostDate, squadronmembersonly, maxmainattendees, hasreservelist)
 
-        if whotoping == 0:
+        if whotoping.value == 0:
             whotopingText = "<@&1338270607220932639>" # Squadron members
-        elif whotoping == 1:
+        elif whotoping.value == 1:
             whotopingText = "<@&1300018031002652754>" # Events ping
         else:
             whotopingText = "<@&1338270607220932639> and <@&1300018031002652754>" # Both pings
 
         myView.message = await ctx.channel.send(whotopingText, embed=embed, view=myView)
-        await writedata(client,"OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
@@ -768,22 +786,34 @@ class EventGroup(app_commands.Group):
         
 
     @app_commands.describe(
-    battlerating="Choose the battle rating (e.g., 6.7, 7.3, 8.0)",
+    battlerating_override="Choose the battle rating (e.g., 6.7, 7.3, 8.0)",
     hour="Hour of the event in 24 hour notation (0-24), in your local time, the bot will automatically convert it",
     minute="Minute of the event 0-59"
     )
     @app_commands.command(description="A command to host SQB at a specified BR and hour")
-    async def squadronbattle(self, ctx : discord.Interaction, battlerating : str, hour : int, minute : int):
+    async def squadronbattle(self, ctx : discord.Interaction, hour : int, minute : int, battlerating_override : str = "none"):
         if not(isDevBot) and ((not IsUserSquadronStaff(ctx.user) and ctx.user.get_role(COMMUNITYHOST) == None) and not(ctx.user.id == 259644962876948480 or ctx.user.id == 490216540331966485)):
             await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
             return
-        if len(battlerating.strip()) == 0:
-            await ctx.response.send_message('⚠️ Battle rating cannot be empty', ephemeral=True)
-            return
-        pattern = r"^(?:[0-9]|1[0-9]|20)\.(0|3|7)$"
-        if not bool(re.fullmatch(pattern, battlerating)):
-            await ctx.response.send_message('⚠️ Battle rating is incorrect! Please verify! It can only be numbers 0.0 to 20.7 with .0, .3, .7', ephemeral=True)
-            return
+        
+        if battlerating_override != "none":
+            # if overriden check if allowed
+            if len(battlerating_override.strip()) == 0:
+                await ctx.response.send_message('⚠️ Battle rating cannot be empty', ephemeral=True)
+                return
+            pattern = r"^(?:[0-9]|1[0-9]|20)\.(0|3|7)$"
+            if not bool(re.fullmatch(pattern, battlerating_override)): #
+                await ctx.response.send_message('⚠️ Battle rating is incorrect! Please verify! It can only be numbers 0.0 to 20.7 with .0, .3, .7', ephemeral=True)
+                return
+            battlerating = battlerating_override
+        else:
+            battlerating = GetBRRightNow()
+            if battlerating == None:
+                await ctx.response.send_message('⚠️ An error has occured while getting the current BR... Use the battlerating override to start an event')
+                return
+
+            
+            
         if hour == 24:
             hour = 0
         elif not (0 <= hour <= 24):
@@ -798,6 +828,8 @@ class EventGroup(app_commands.Group):
             return
         
         await ctx.response.send_message('✅ Starting squadron battles!', ephemeral=True)
+
+
 
         time = ctx.user.nick[ctx.user.nick.find('[')+4:len(ctx.user.nick)-1]
         today = datetime.today()
@@ -825,11 +857,15 @@ class EventGroup(app_commands.Group):
                 
         myView = EventView(embed, ctx.user, hostDate, True, 8, True)
         myView.message = await ctx.channel.send('<@&1338270607220932639>', embed=embed, view=myView)
-        await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
         myView.id = today.timestamp()
         myView.owner = ctx.user
         client.add_view(view=myView, message_id=myView.message.id)
 
+
+@client.tree.command(description="Shows the version of the bot")
+async def version(ctx :  discord.Interaction):
+    await ctx.response.send_message(versiontxt)
 
 @client.tree.command(description="Testing")
 async def test(ctx : discord.Interaction):
@@ -867,7 +903,7 @@ async def test(ctx : discord.Interaction):
 @client.tree.command(description="statistics such as total utc per type!")
 async def stats(message):
     # Get the list of discord members
-    discord_members = await get_discord_list()
+    discord_members = await get_discord_list(client)
 
     # make a list of all timezones too
     utcList = []
@@ -956,13 +992,54 @@ async def warthunderguessr(ctx: discord.Interaction, difficulty: app_commands.Ch
     message = await ctx.channel.send("WarthunderGuessr started! You have 3 minutes to guess the location by using the buttons below!", view=view)
     view.message = message
     view.owner = ctx.user
-    client.add_view(view=view, message_id=message.id)
+    
+
+# Will start a sqb event automatically, one at 6pm UTC and 
+@tasks.loop(minutes=1)
+async def task_start_squadron_battle_event():
+    logging.info(f'Checking if we should start an event, 1m passed')
+    timeNow = datetime.now()
+
+    if not timeNow.minute == 00:
+        logging.info(f'We don\'t have to, minute isn\'t not at XX:00')
+        return
+
+    if not(timeNow.hour == 18):
+        logging.info(f'We don\'t have to, hour is at {timeNow.hour}:00')
+        return
+    
+    logging.info("Starting auto event!")
+    # EU host
+    hostDate = timeNow + timedelta(hours=2)
+    
+    embed = discord.Embed(color=int("696969", 16), title=f'**Squadron Battles [MAX BR {GetBRRightNow()}]**\n',
+                        description=f'<t:{int(hostDate.timestamp())}:R> | <t:{int(hostDate.timestamp())}:t>\n' +
+                        '**This is a self hosted event, "host" will be decided at the time!**\n' +
+                        '**Min. required checks: 8**\n' +
+                        '-# - Don\'t fake check, this will result in punishments!\n' +
+                        '-# - Make sure you check on time!\n' +
+                        '-# - <:MidnightRavens:1233397037110919220> Make sure your vehicles are spaded!\n')
+    
+    embed.set_author(name=f'​Hosted by {client.user.name}', icon_url=client.user.display_avatar)
+    
+    embed.add_field(name='0 Attendees (max 8):', value=f'', inline=True)
+    embed.add_field(name='0 Reserves:', value=f'', inline=True)
+    
+    channelID = 1195674602119106652
+
+    myView = EventView(embed, client.user, hostDate, True, 8, True)
+    myView.message = await client.get_channel(channelID).send('<@&1338270607220932639>', embed=embed, view=myView)
+    if not isDevBot:
+        await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+    myView.id = hostDate.timestamp()
+    myView.owner = client.user
+    client.add_view(view=myView, message_id=myView.message.id)
     
 
 # Checks if 6hours have passed since the start of the event, if so, stop the event.
 @tasks.loop(minutes=1)
 async def task_end_old_events():
-    logging.info(f'{datetime.now()} | Running "task_end_old_events", 1m has passed.')
+    logging.info(f'Running "task_end_old_events", 1m has passed.')
 
     if client.persistent_views:
         for view in client.persistent_views:
@@ -980,7 +1057,7 @@ async def task_end_old_events():
                     view.started = True
                     await view.start()
 
-    logging.info(f'{datetime.now()} | Task "task_end_old_events" done')
+    logging.info(f'Task "task_end_old_events" done')
 
 @tasks.loop(hours=12)
 async def task_check_join_date():
@@ -996,9 +1073,45 @@ async def task_check_join_date():
         else:
             logging.info(f"{guildmember.name} is NOT in here for a year")
 
+skipFirstUploadTaskRun = True
+@tasks.loop(hours=48)
+async def task_upload_last_log():
+    global skipFirstUploadTaskRun
+    if skipFirstUploadTaskRun == True:
+        logging.info('Skipping first upload run...')
+        skipFirstUploadTaskRun = False
+        return
+    logging.info(f'Running "task_upload_logs", 48h have passed.')
+    global file_handler
+
+    # stop logs
+    logging.info("Stopping filelogs for upload...")
+    for handler in logger.handlers[:]:
+        if isinstance(handler, logging.FileHandler):
+            logger.removeHandler(handler)
+            handler.close()
+
+    file_handler = create_file_handler()
+    logger.addHandler(file_handler)
+    logging.info("Logging initialised!")
+    logging.info(client.user.name)
+
+    # handlers done
+    RemoveOldLogs()
+
+    log_file = log_files[-2]
+    channel = client.get_channel(LOGGING_CHANNEL)
+    logging.info('Attempting to send past log to discord')
+    try:
+        await channel.send(file=discord.File(os.path.join("logs", log_file)))
+    except Exception as e:
+        logging.warning(f"Failed to send current log: {e}")
+
+
+
 @tasks.loop(hours=6)
 async def task_write_squadron_highest_SQBrating():
-    logging.info(f'{datetime.now()} | Running "task_write_squadron_highest_SQBrating", 6h have passed.')
+    logging.info(f'Running "task_write_squadron_highest_SQBrating", 6h have passed.')
 
     squadronPlayers = await get_squadron_players()
     logging.info(f"Got squadron players: {squadronPlayers}")
@@ -1006,14 +1119,16 @@ async def task_write_squadron_highest_SQBrating():
     for _number_, personData in squadronPlayers.items():
         if int(personData[1]) == 0:
             continue
-        message, squadronRating = await getData(client, str(personData[0]), "HighestSquadronRating")
+        message, squadronRating = await GetData(str(personData[0]), "HighestSquadronRating")
         if squadronRating == None or int(squadronRating) < int(personData[1]):
-            await writedata(client, personData[0], "HighestSquadronRating", personData[1])
+            await Writedata(personData[0], "HighestSquadronRating", personData[1])
 
-    logging.info(f'{datetime.now()} | Task "task_write_squadron_highest_SQBrating" done')
+    logging.info(f'Task "task_write_squadron_highest_SQBrating" done')
 
 @client.event
 async def on_ready():
+    logging.info('Setup DB')
+    await SetupDB(client)
     
     logging.info('Syncing...')
     if not isDevBot:
@@ -1030,9 +1145,9 @@ async def on_ready():
     logging.info('Attempting to load ongoing events...')
     # if there is currently no persistent views upon start, do this...
     logging.info(f"Persistent views: {client.persistent_views}")
-    if len(client.persistent_views) == 0:
+    if len(client.persistent_views) == 0 and not isDevBot:
         # Check all events, if they are valid
-        _, eventData = await getFullUserData(client, "OngoingEvents")
+        _, eventData = await GetFullUserData("OngoingEvents")
         if not (eventData == None):
             events = str(eventData).split(";")
             for event in events:
@@ -1078,7 +1193,7 @@ async def on_ready():
                     try:
                         if oldEmbed.fields[1].value != "":
                             oldReserveListNames = oldEmbed.fields[1].value.split('\n')
-                            logging.info("Raw list reserve: ", oldReserveListNames)
+                            logging.info(f"Raw list reserve: {oldReserveListNames}")
                             if len(oldReserveListNames) > 0:
                                 for value in oldReserveListNames:
                                     logging.info(f"Processing reserve attendee: {value}")
@@ -1094,7 +1209,7 @@ async def on_ready():
 
                     # Get user
                     user = oldEmbed.author.name[10:].strip()
-                    discordList = await get_discord_list()
+                    discordList = await get_discord_list(client)
                     found = False
                     logging.info(f"Searching for host of event: \"{oldEmbed.title}\"")
                     for discordUser in discordList:
@@ -1122,36 +1237,54 @@ async def on_ready():
                         try:
                             maxAttendees = int(oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2])
                         except:
-                            logging.warning("Something went from extracting an int from: ", oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2], " |  Will assume the max is infinite...")
+                            logging.warning(f"Something went from extracting an int from: {oldAttendeeName[maxIndex + 4:len(oldAttendeeName)-2]} |  Will assume the max is infinite...")
                             maxAttendees = -1
-                        logging.info("Max attendees = ", maxAttendees)
+                        logging.info(f"Max attendees = {maxAttendees}")
                         
                     
                     logging.info("Searching for if only squadron members are allowed...")
                     squadronMembersOnly = False
                     if oldEmbed.author.name[0] == "​":
                         # invisible character to notify if it's squadron members only
+                        logging.info(f"It is for squadron members only")
                         squadronMembersOnly = True
 
                     # Event can continue!
                     myView = EventView(oldEmbed, user, hostDate, squadronMembersOnly, maxAttendees, reserveList!=None, primaryList, reserveList)
                     myView.message = await message.edit( content=message.content, embed=oldEmbed, view=myView)
-                    #await writedata(client, "OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
+                    #await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))
                     myView.id = datetime.today().timestamp()
                     myView.owner = user
                     client.add_view(view=myView, message_id=myView.message.id)
                     logging.info("Event done!")
                 except:
-                    logging.error("Something went wrong with loading event:", event, "This event won't be able to restart anymore... Deleting...")
-                    await removedatakey(client, "OngoingEvents", event.split(":")[0])
+                    logging.error(f"Something went wrong with loading event: {event} This event won't be able to restart anymore... Deleting...")
+                    await Removedatakey("OngoingEvents", event.split(":")[0])
                     logging.info("Deleted")
+    logging.info('Done loading events!')
+
+    # If dev mode is enabled then don't send logs
+    if not isDevBot:
+        channel = client.get_channel(LOGGING_CHANNEL)
+        logging.info('Attempting to send previous log to discord')
+        try:
+            await channel.send(file=discord.File(os.path.join("logs", log_files[-2])))
+        except Exception as e:
+            logging.warning(f"Failed to send previous log: {e}")
+        # 
+        if not task_upload_last_log.is_running():
+            logging.info(f'Task "{(task_upload_last_log.start()).get_name()}" is running...')
 
 
-    logging.info('Done loading! Starting tasks')
+
+    logging.info(f'Attempting to start tasks...')
     if not task_end_old_events.is_running():
         logging.info(f'Task "{(task_end_old_events.start()).get_name()}" is running...')
+    
           
     if not isDevBot:
+        if not task_start_squadron_battle_event.is_running():
+            logging.info(f'Task "{(task_start_squadron_battle_event.start()).get_name()}" is running...')
         if not task_write_squadron_highest_SQBrating.is_running():
             logging.info(f'Task "{(task_write_squadron_highest_SQBrating.start()).get_name()}" is running...')
             

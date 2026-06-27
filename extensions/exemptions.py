@@ -1,6 +1,10 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing exemptions.py')
+logging.info(f'Importing {Path(__file__).name}')
+
+import discord
+from config_loader import config, isDevBot
 
 import discord
 from discord import app_commands
@@ -9,13 +13,6 @@ from discord.ext import commands
 from datetime import datetime, timedelta
 from asyncio.windows_events import NULL
 
-from pathlib import Path
-from json import loads
-
-base_path = Path(__file__).parent
-config = loads((base_path / "../config.json").read_text())
-
-isDevBot = config["devMode"]
 
 SQUADRONSTAFFID = config["squadronStaffId"]
 if isDevBot:
@@ -23,7 +20,7 @@ if isDevBot:
 
 # import all needed helper functions
 from helperFunctions.data_helpers import get_exemption_list, get_discord_exemption_list
-from helperFunctions.db import writedata
+from helperFunctions.db import Writedata
 
 @app_commands.guild_only()
 class ExemptionListGroup(app_commands.Group):
@@ -76,7 +73,7 @@ class ExemptionListGroup(app_commands.Group):
         endPrint = ingameusername.lower().strip()
         for exemption in listExemptions:
             endPrint += "§§" + exemption
-        await writedata("Bot", "ExemptionListIGN", endPrint)
+        await Writedata("Bot", "ExemptionListIGN", endPrint)
         await ctx.response.send_message(f'"{ingameusername.strip()}" has been added to the exemption list.', ephemeral=True)
             
     
@@ -96,7 +93,7 @@ class ExemptionListGroup(app_commands.Group):
             if not (username == ingameusername.lower().strip()):
                 finalWritePart += "§§"+ username
 
-        await writedata("Bot", "ExemptionListIGN", finalWritePart[2:])
+        await Writedata("Bot", "ExemptionListIGN", finalWritePart[2:])
             
         await ctx.response.send_message(f'Removed "{ingameusername}" from the permanent exemption list', ephemeral=True)
 

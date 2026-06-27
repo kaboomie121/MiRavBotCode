@@ -1,18 +1,15 @@
 import logging
+from pathlib import Path
 logging.getLogger(__name__)
-logging.info('Importing date_helpers.py')
+logging.info(f'Importing {Path(__file__).name}')
+
+import discord
+from config_loader import config, isDevBot
+
 
 import datetime
 from datetime import datetime
-import discord
 import requests
-
-from json import loads
-from pathlib import Path
-base_path = Path(__file__).parent
-config = loads((base_path / "../config.json").read_text())
-
-isDevBot = config["devMode"]
 
 DISCORDGUILD = config["discordGuild"]
 TESTDISCORDGUILD = config["testDiscordGuild"]
@@ -27,7 +24,7 @@ EXEMPTION_SQ_RATING = config["exemptionSQRating"]
 JOIN_DEADLINE = config["joinDeadline"]
 
 # import all needed helper functions
-from helperFunctions.db import getData
+from helperFunctions.db import GetData
 
 def FindFirstIndex(string, findChar):
     for charNumber_, char in enumerate(string):
@@ -45,58 +42,62 @@ async def get_notice_list(client : discord.Client):
     messages = [message async for message in client.get_channel(NOTICELIST_CHANNEL).history(limit=123)]
     returnList = list()
     for message in messages:
-        messageSplit = message.content.splitlines()
-        name = ''
-        for text in messageSplit[0].split()[1:]:
-            name += text + ' '
-        today = round(datetime.now().timestamp()-1)
-        # no dates
-        if FindFirstIndex(messageSplit[2], '<') == -1:
-            # Alert to check list
-            returnList.append([name.strip().replace(' ', '').lower(), 2])
-        # Two dates
-        elif messageSplit[2].count('<') == 2:
-            index = FindFirstIndex(messageSplit[2], '<') +3
-            secondIndex = FindFirstIndex(messageSplit[2], '>')-2
-            # if it is in the future, skip and don't alert as he's not needed yet
-            if today < int(messageSplit[2][index:secondIndex]):
-                continue
-            
-            index = FindFirstIndex(messageSplit[2][secondIndex:], '<') + secondIndex+3
-            secondIndex = FindFirstIndex(messageSplit[2][index:], '>') + index-2
-            # if end date is in the past, skip
-            if today > int(messageSplit[2][index:secondIndex]):
-                returnList.append([name.strip().replace(' ', '').lower(), 1])
-                continue
-            returnList.append([name.strip().replace(' ', '').lower(), 0])
-        # One dates
-        elif messageSplit[2].count('<') == 1:
-            index = FindFirstIndex(messageSplit[2], '<')+3
-            secondIndex = FindFirstIndex(messageSplit[2], '>')-2
-            # if end date is in the future, add
-            if today < int(messageSplit[2][index:secondIndex]):
+        try:
+            messageSplit = message.content.splitlines()
+            name = ''
+            for text in messageSplit[0].split()[1:]:
+                name += text + ' '
+            today = round(datetime.now().timestamp()-1)
+            # no dates
+            if FindFirstIndex(messageSplit[2], '<') == -1:
+                # Alert to check list
+                returnList.append([name.strip().replace(' ', '').lower(), 2])
+            # Two dates
+            elif messageSplit[2].count('<') == 2:
+                index = FindFirstIndex(messageSplit[2], '<') +3
+                secondIndex = FindFirstIndex(messageSplit[2], '>')-2
+                # if it is in the future, skip and don't alert as he's not needed yet
+                if today < int(messageSplit[2][index:secondIndex]):
+                    continue
+                
+                index = FindFirstIndex(messageSplit[2][secondIndex:], '<') + secondIndex+3
+                secondIndex = FindFirstIndex(messageSplit[2][index:], '>') + index-2
+                # if end date is in the past, skip
+                if today > int(messageSplit[2][index:secondIndex]):
+                    returnList.append([name.strip().replace(' ', '').lower(), 1])
+                    continue
                 returnList.append([name.strip().replace(' ', '').lower(), 0])
-            # if end date is in the the past then alert he's still on the list
+            # One dates
+            elif messageSplit[2].count('<') == 1:
+                index = FindFirstIndex(messageSplit[2], '<')+3
+                secondIndex = FindFirstIndex(messageSplit[2], '>')-2
+                # if end date is in the future, add
+                if today < int(messageSplit[2][index:secondIndex]):
+                    returnList.append([name.strip().replace(' ', '').lower(), 0])
+                # if end date is in the the past then alert he's still on the list
+                else:
+                    returnList.append([name.strip().replace(' ', '').lower(), 1])
             else:
+                # Alert someone is on the list
                 returnList.append([name.strip().replace(' ', '').lower(), 1])
-        else:
-            # Alert someone is on the list
-            returnList.append([name.strip().replace(' ', '').lower(), 1])
+        except:
+            # nothing ig
+            continue
 
     return returnList
     
-async def get_discord_exemption_list(client : discord.Client):
+async def get_discord_exemption_list():
     print ('Getting discord exemption list...')
-    _, listExemptions = await getData(client, "Bot", "ExemptionListDISCORD")
+    _, listExemptions = await GetData("Bot", "ExemptionListDISCORD")
     
     if listExemptions == None:
         listExemptions = ""
         
     return listExemptions.split("§§")
 
-async def get_exemption_list(client : discord.Client):
+async def get_exemption_list():
     logging.info( 'Getting ingame exemption list...')
-    _, listExemptions = await getData(client, "Bot", "ExemptionListIGN")
+    _, listExemptions = await GetData("Bot", "ExemptionListIGN")
     
     if listExemptions == None:
         listExemptions = ""
@@ -104,9 +105,9 @@ async def get_exemption_list(client : discord.Client):
     return listExemptions.split("§§")
 
 
-async def get_squadron_kickable(client : discord.Client, personList):
+async def get_squadron_kickable(bot : discord.client, personList):
     logging.info('Getting kickable squadron members...')
-    noticeList = await get_notice_list(client)
+    noticeList = await get_notice_list(bot)
     
     # Convert string to datetime object
     date_format = "%d.%m.%Y"

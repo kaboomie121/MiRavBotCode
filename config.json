@@ -1,6 +1,4 @@
 {
-    "devMode": true,
-    
     "discordGuild": 1194494035189051472,
     "testDiscordGuild" : 1292920930686861433,
 
@@ -9,12 +7,13 @@
     "secondDeadline": 30,
     "secondActivityRequirement": 2000,
     "exemptionSQRating": 1,
-    "joinDeadline": 2,
+    "joinDeadline": 0,
 
     "noticeListChannelId": 1288570136000856197,
     "squadronMemberRoleId": 1338270607220932639,
     "squadronStaffId" : 1234376539987251292,
     "communityHostRoleId" : 1252184328687849515,
 
-    "DBChannelId": 1357823210422534305
+    "DBChannelId": 1357823210422534305,
+    "loggingChannelId": 1483868456196767745
 }
