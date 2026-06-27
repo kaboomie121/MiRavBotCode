@@ -8,6 +8,7 @@ using MiRavBotWebApp.Models;
 namespace MiRavBotWebApp.Controllers;
 
 [Authorize]
+[Route("dashboard")]
 public class DashboardController : Controller
 {
     private readonly IConfiguration _configuration;
@@ -16,7 +17,7 @@ public class DashboardController : Controller
     {
         _configuration = configuration;
     }
-
+    [Route("{guildId?}")]
     public async Task<IActionResult> Index(string? guildId)
     {
         var accessToken = await HttpContext.GetTokenAsync("access_token");
@@ -56,6 +57,24 @@ public class DashboardController : Controller
         };
 
         return View(viewModel);
+    }
+    [Route("{guildId}/events")]
+    public async Task<IActionResult> Events(string guildId)
+    {
+        var accessToken = await HttpContext.GetTokenAsync("access_token");
+
+        var viewModel = new DashboardViewModel
+        {
+            SelectedGuild = await FetchGuildFromDiscord(accessToken, guildId)
+        };
+        return View(viewModel);
+    }
+
+    private async Task<DiscordGuild> FetchGuildFromDiscord(string? accessToken, string guildId)
+    {
+        var guilds = await FetchGuildsFromDiscord(accessToken);
+
+        return guilds.Where(g => g.Id == guildId).FirstOrDefault() ?? new DiscordGuild();
     }
 
     private async Task<List<DiscordGuild>> FetchGuildsFromDiscord(string? token)
