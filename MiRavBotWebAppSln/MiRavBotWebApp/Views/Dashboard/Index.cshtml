@@ -50,20 +50,24 @@
         <div class="d-flex justify-content-center">
             <div class="row row-cols-1 row-cols-md-2 g-4 justify-content-center" style="max-width: 760px; width: 100%;">
                 <div class="col">
-                    <button class="btn btn-outline-primary btn-lg w-100 py-4 shadow-sm rounded-4"
-                            @(canManage ? "" : "disabled")>SQB</button>
+                    <a asp-action="SQB" asp-route-guildId="@Model.SelectedGuild.Id" class="btn btn@(canManage ? "" : "-outline")-primary btn-lg w-100 py-4 shadow-sm rounded-4 @(canManage ? "" : "disabled")">
+                        SQB
+                    </a>
                 </div>
                 <div class="col">
-                    <button class="btn btn-outline-primary btn-lg w-100 py-4 shadow-sm rounded-4"
-                            @(canManage ? "" : "disabled")>Moderation</button>
+                    <a asp-action="Moderation" asp-route-guildId="@Model.SelectedGuild.Id" class="btn btn@(canManage ? "" : "-outline")-primary btn-lg w-100 py-4 shadow-sm rounded-4 @(canManage ? "" : "disabled")">
+                        Moderation
+                    </a>
                 </div>
                 <div class="col">
-                    <a asp-action="Events" asp-route-guildId="@Model.SelectedGuild.Id" class="btn btn-primary btn-lg w-100 py-4 shadow-sm rounded-4">
+                    <a asp-action="Events" asp-route-guildId="@Model.SelectedGuild.Id" class="btn btn@(canManage ? "" : "-outline")-primary btn-lg w-100 py-4 shadow-sm rounded-4 @(canManage ? "" : "disabled")">
                         Events Template
                     </a>
                 </div>
                 <div class="col">
-                    <button class="btn btn-outline-success btn-lg w-100 py-4 shadow-sm rounded-4">SQB Analyser</button>
+                    <a asp-action="SQBAnalyser" asp-route-guildId="@Model.SelectedGuild.Id" class="btn btn-primary btn-lg w-100 py-4 shadow-sm rounded-4">
+                        SQB Analyser
+                    </a>
                 </div>
             </div>
         </div>
