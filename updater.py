@@ -31,93 +31,24 @@ while True:
         break
 
 def update():
-    logging.info('Starting update process...')
-    base_path = str(Path(__file__).parent) + "/"
+    base_path = Path(__file__).parent
 
+    logging.info("Pulling latest changes from GitHub...")
 
-    token = ""
+    result = subprocess.run(
+        ["git", "pull"],
+        cwd=base_path,
+        capture_output=True,
+        text=True
+    )
 
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    headers = ""
-    OWNER = 'kaboomie121'
-    REPO  = 'miravbotcode'
+    if result.returncode != 0:
+        logging.critical("git pull failed.")
+        logging.critical(result.stderr)
+        return False
 
-    REF  = ''      # master/main branch is ref empty, otherwise specify the branch name or tag name
-
-    EXT  = 'zip'
-    #EXT  = 'tar'  # it also works
-    url = f'https://api.github.com/repos/{OWNER}/{REPO}/{EXT}ball/{REF}'
-    logging.info('github url:' + url)
-
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        logging.info('Update package downloaded successfully.')
-        logging.info('size:' + str(len(r.content)))
-        # save the file
-        try:
-            with open(base_path + f'output.{EXT}', 'wb') as fh:
-                fh.write(r.content)
-                logging.info(f'File {base_path}output.{EXT} saved successfully.')
-        except Exception as e:
-            logging.critical(f'Error saving the file: {e}')
-            return
-
-        # Try to extract the file
-        try:
-            with zipfile.ZipFile(base_path + f'output.{EXT}', 'r') as zip_ref:
-                zip_ref.extractall(base_path)
-                logging.info(f'File {base_path}output.{EXT} extracted successfully.')
-        except Exception as e:
-            logging.critical(f'Error extracting the file: {e}')
-            return
-
-        # find the extracted folder (it should be the only one in the base path)
-        for file in os.listdir(base_path):
-            filepath = os.path.join(base_path, file)
-            if os.path.basename(filepath).startswith("kaboomie121-MiRavBotCode"):
-                logging.info('extracted folder:' + filepath)
-                break
-        
-        # remove the old files in the base path (except logs and the extracted folder) and move the new files to the base path
-        for file in os.listdir(base_path):
-            try:
-                if (file == "logs" or file == filepath.removeprefix(base_path) or file == "token.json"):
-                    continue
-                if os.path.isfile(os.path.join(base_path, file)) or os.path.islink(os.path.join(base_path, file)):
-                    os.remove(os.path.join(base_path, file))
-                    logging.info(f'Removing file in base path: {file}')
-                elif os.path.isdir(os.path.join(base_path, file)):
-                    shutil.rmtree(os.path.join(base_path, file))
-                    logging.info(f'Removing directory in base path: {file}')
-            except Exception as e:
-                logging.critical(f'Error removing file: {e}')
-        
-
-        # move the files
-        for file in os.listdir(filepath):
-            try:
-                shutil.move(os.path.join(filepath, file), os.path.join(base_path, file))
-                logging.info(f'Moved {os.path.join(filepath, file)} to {os.path.join(base_path, file)}')    
-            except Exception as e:
-                logging.critical(f'Error moving file: {e}')
-        
-        # remove the empty extracted folder
-        try:
-            os.removedirs(filepath)
-        except Exception as e:
-            logging.critical(f'Error removing empty folder: {e}')
-            return
-        # All succeeded, start bot and kill myself
-        logging.info('Update successful, starting bot...')
-        subprocess.Popen(["python", "bot.py"], cwd=base_path)
-        logging.info('Bot start called, exiting updater...')
-        sys.exit(0)
-    else:
-        logging.critical(f'Failed to download update package. Status code: {r.status_code}')
-        logging.critical(r.text)
+    logging.info(result.stdout)
+    return True
 
         
 if __name__ == "__main__":

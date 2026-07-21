@@ -27,25 +27,20 @@ def remove_alternate_newlines(s):
         new_str += char
     return new_str
 
-def get_remote_script(fileName : str):
-    # Idk bro
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+import subprocess
 
-    response = requests.get(GITHUB_API_URL + fileName, headers=headers)
-    if response.status_code == 200:
-        json_response = response.json()
-        if "content" in json_response:
-            returnContent = base64.b64decode(json_response["content"]).decode("utf-8")
+def get_remote_version():
+    result = subprocess.run(
+        ["git", "show", "origin/master:version.txt"],
+        capture_output=True,
+        text=True
+    )
 
-            returnContent = returnContent.replace('\r', '')
+    if result.returncode != 0:
+        logging.error(result.stderr)
+        return None
 
-            return returnContent
-        else:
-            logging.error("\033[31mError:\033[0m No content field in GitHub response.")
-    elif int(response.status_code) == int(403):
-        logging.error("Failed to fetch the bot script. Status code: %s. Error reason: TIMED OUT BY GITHUB", response.status_code)
-    else:
-        logging.error("Failed to fetch the bot script. Status code: %s", response.status_code)
+    return result.stdout.strip()
             
 
     return None
@@ -55,22 +50,29 @@ def get_local_version():
     if not os.path.exists(LOCAL_PATH + VERSION_FILENAME):
         return ""  # If bot.py doesn't exist yet, treat it as an empty file
     with open(LOCAL_PATH + VERSION_FILENAME, "r", encoding="utf-8") as f:
-        return remove_alternate_newlines(f.read().replace('\r', ''))
+        return (f.read().replace('\r', '')).strip()
     
 def checkForUpdate():
     logging.info("Checking for updates...")
-    remote_version = get_remote_script(VERSION_FILENAME) #get_remote_script()
-    if remote_version:
-        local_version = get_local_version()
-        logging.info(f"Remote version: {str(remote_version).strip()}")
-        logging.info(f"Local version: {str(local_version).strip()}")
-        if str(remote_version).strip() != str(local_version).strip():
-            logging.info(f"\033[32mUpdate found!\033[0m New version: {str(remote_version).strip()}")
-            return True
-        else:
-            logging.info("\033[33mNo updates found.\033[0m")
-            return False
-    elif remote_version == None:
-        logging.error("\033[33mERROR:\033[0m remote_version returned None")
+
+    fetch = subprocess.run(
+        ["git", "fetch", "origin"],
+        capture_output=True,
+        text=True
+    )
+
+    if fetch.returncode != 0:
+        logging.error(fetch.stderr)
         return False
-    return False
+
+    remote_version = get_remote_version()
+
+    if remote_version is None:
+        return False
+
+    local_version = get_local_version()
+
+    logging.info(f"Remote version: {remote_version}")
+    logging.info(f"Local version : {local_version}")
+
+    return remote_version != local_version

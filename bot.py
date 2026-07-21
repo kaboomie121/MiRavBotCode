@@ -132,9 +132,16 @@ from helperFunctions.SQB_battle_rating import GetBRRightNow
 
 
 # check for updates, if there are any, update the bot script, only run if not in dev mode and restart the bot
-if not isDevBot:
+if isDevBot:
+    logging.info('Update check...')
     if checkForUpdate():
-        update()
+        logging.info('Update found during start, restarting bot... (yippee)')
+        if update():
+            subprocess.Popen(["python", "bot.py"], cwd=base_path)
+            sys.exit(0)
+    else:
+        logging.info('No update found! All good!')
+
 
 # check for an update every 30 minutes, only run if not in dev mode
 @tasks.loop(minutes=30)
@@ -145,8 +152,9 @@ async def periodic_update_check():
     logging.info('Running periodic update check...')
     if checkForUpdate():
         logging.info('Update found during periodic check, restarting bot...')
-        subprocess.Popen(["python", "bot.py"], cwd=base_path)
-        sys.exit(0)
+        if update():
+            subprocess.Popen(["python", "bot.py"], cwd=base_path)
+            sys.exit(0)
     else:
         logging.info('No update found during periodic check.')
 
