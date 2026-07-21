@@ -4,3 +4,4 @@ token.json
 /extensions/__pycache__
 /__pycache__
 /logs
+/database
