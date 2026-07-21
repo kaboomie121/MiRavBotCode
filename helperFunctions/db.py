@@ -93,8 +93,8 @@ async def main():
     print(db.Config.GetFullConfig("MiRav"))
     print(db.Config.GetConfig("MiRav", "TestKey1"))
 
-    db.Config.AddConfig("MiRav", "TestKey1", "TestData1")
-    db.Config.AddConfig("MiRav", "TestKey2", "TestData2")
+    db.Config.SetConfig("MiRav", "TestKey1", "TestData1")
+    db.Config.SetConfig("MiRav", "TestKey2", "TestData2")
 
 
     print(db.Config.GetFullConfig("MiRav"))
@@ -151,7 +151,17 @@ class db:
         Config file that holds all the config data\n
         """
         @staticmethod
-        def AddConfig(serverID: str, key: str, data):
+        def MakeNewConfig(serverID: str):
+            logging.info(f"{__class__.__name__} Making new config  for {serverID}")
+            dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\config.json"
+            with open(dblocation, "w", encoding="utf-8") as f:
+                config : dict = {}
+                json.dump(config, f, indent=4)
+            return config
+
+
+        @staticmethod
+        def SetConfig(serverID: str, key: str, data):
             dblocation = f"{DB_BASE_LOCATION}\\{serverID}\\config.json"
             logging.info(f"{__class__.__name__} Adding ServerID: {serverID} Key: {key} with data {data}")
 
@@ -163,8 +173,9 @@ class db:
                 with open(dblocation, "r", encoding="utf-8") as f:
                     config = json.load(f)
             else:
-                config = {}
-                logging.info(f"{__class__.__name__} No data was found, making new")
+                logging.info(f"{__class__.__name__} No config was found for {serverID}, making new")
+                config = db.Config.MakeNewConfig(serverID)
+                
 
             # Add or update the key
             config[key] = data
@@ -183,7 +194,7 @@ class db:
                 return None
 
             with open(dblocation, "r", encoding="utf-8") as f:
-                config = json.load(f)
+                config : dict = json.load(f)
             return config.get(key)
 
 
