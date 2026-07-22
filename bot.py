@@ -132,7 +132,7 @@ from helperFunctions.SQB_battle_rating import GetBRRightNow
 
 
 # check for updates, if there are any, update the bot script, only run if not in dev mode and restart the bot
-if isDevBot:
+if not isDevBot:
     logging.info('Update check...')
     if checkForUpdate():
         logging.info('Update found during start, restarting bot... (yippee)')
