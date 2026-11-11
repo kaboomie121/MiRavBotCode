@@ -96,6 +96,7 @@ DISCORDGUILD = config["discordGuild"]
 TESTDISCORDGUILD = config["testDiscordGuild"]
 NOTICELIST_CHANNEL = config["noticeListChannelId"]
 SQUADRONMEMBERROLEID = config["squadronMemberRoleId"]
+EVENTS_CHANNEL = config["eventChannelID"]
 
 import discord 
 from discord import Client, Embed, Interaction, app_commands, ui
@@ -254,6 +255,10 @@ async def verifymembers(ctx:  discord.Interaction):
         await ctx.response.send_message('You do not have the requirements for this command.', ephemeral=True)
         logging.info(f'{ctx.user} does not have the requirements for verifymembers command')
         return
+    if isDevBot:
+        await ctx.response.send_message('Permissions granted | Dev bot, command disabled.', ephemeral=True)
+        return
+
     
     found = False
     usersChecked = 0
@@ -387,7 +392,7 @@ async def WriteAttendanceLists(self, embed, printReserveList):
 
 class EventView(discord.ui.View):
     def __init__(self, embed : Embed, host : discord.member.Member, endDate : datetime, squadronmembersonly : bool, maxmembers : int, twolistsystem: bool,
-                 primaryList = None, reserveList = None):
+                 primaryList = None, reserveList = None, claimable = False):
         super().__init__(timeout=None)
 
         if primaryList != None:
@@ -413,6 +418,11 @@ class EventView(discord.ui.View):
             for item in self.children:
                 if isinstance(item, discord.ui.Button) and item.custom_id == "reservebutton":
                     item.disabled = True
+
+        if not claimable:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button) and item.custom_id == "claimeventbutton":
+                    self.remove_item(item)
 
     async def getembed(self):
         return self.embed
@@ -525,6 +535,29 @@ class EventView(discord.ui.View):
         await WriteAttendanceLists(self, self.embed, self.twolistsystem)
         await interaction.message.edit(embed=self.embed)
 
+    @discord.ui.button(label="Claim event", style=discord.ButtonStyle.danger, custom_id="claimeventbutton")
+    async def button_claim_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isDevBot and not IsUserSquadronStaff(interaction.user):
+            await interaction.response.send_message("⚠️ You are not a squadron host!", ephemeral=True)
+            return
+        
+        button.disabled = True
+        self.remove_item(button)
+        
+        if self.squadronmembersonly:
+            # Invisible character that saves if squadron member only
+            self.embed.set_author(name=f'​Hosted by {interaction.user.nick[:interaction.user.nick.find('[')]}', icon_url=interaction.user.display_avatar)
+        else:
+            # NO invisible character that saves NOT squadron member only
+            self.embed.set_author(name=f'Hosted by {interaction.user.nick[:interaction.user.nick.find('[')]}', icon_url=interaction.user.display_avatar)
+
+        self.embed.description = self.embed.description.replace('**No host has currently taken the event. Host will be decided at start.**\n', '')
+        
+        await interaction.message.edit(embed=self.embed, view=self)
+        await interaction.response.send_message('✅ You\'ve claimed host of the session!', ephemeral=True)
+
+
+
 @app_commands.guild_only()
 class EventGroup(app_commands.Group):
     @app_commands.command(description="A command to host SQB at a specified BR and hour")
@@ -533,7 +566,7 @@ class EventGroup(app_commands.Group):
     app_commands.Choice(name='Event ping only', value=1),
     app_commands.Choice(name='Both pings', value=2)
     ])
-    async def host(self, ctx : discord.Interaction, title : str, hour : int, minute : int, description : str = "", maxmainattendees : int = -1, hasreservelist : bool = False, whotoping : app_commands.Choice[int] = 0):
+    async def host(self, ctx : discord.Interaction, title : str, hour : int, minute : int, description : str = "", maxmainattendees : int = -1, hasreservelist : bool = False, whotoping : int = 0):
         if not(isDevBot) and (not IsUserSquadronStaff(ctx.user) and ctx.user.get_role(COMMUNITYHOST) == None) and not(IsUserBotOwner(ctx.user) or ctx.user.id == 490216540331966485):
             await ctx.response.send_message('⚠️ You do not have the requirements for this command.', ephemeral=True)
             return
@@ -555,7 +588,7 @@ class EventGroup(app_commands.Group):
             return
         
         squadronmembersonly = True
-        if whotoping.value != 0:
+        if whotoping != 0:
             squadronmembersonly = False
         await ctx.response.send_message(content='✅ Starting event!', ephemeral=True)
 
@@ -596,9 +629,9 @@ class EventGroup(app_commands.Group):
         
         myView = EventView(embed, ctx.user, hostDate, squadronmembersonly, maxmainattendees, hasreservelist)
 
-        if whotoping.value == 0:
+        if whotoping == 0:
             whotopingText = "<@&1338270607220932639>" # Squadron members
-        elif whotoping.value == 1:
+        elif whotoping == 1:
             whotopingText = "<@&1300018031002652754>" # Events ping
         else:
             whotopingText = "<@&1338270607220932639> and <@&1300018031002652754>" # Both pings
@@ -1022,7 +1055,7 @@ async def task_start_squadron_battle_event():
     
     embed = discord.Embed(color=int("696969", 16), title=f'**Squadron Battles [MAX BR {GetBRRightNow()}]**\n',
                         description=f'<t:{int(hostDate.timestamp())}:R> | <t:{int(hostDate.timestamp())}:t>\n' +
-                        '**This is a self hosted event, "host" will be decided at the time!**\n' +
+                        '**No host has currently taken the event. Host will be decided at start.**\n' +
                         '**Min. required checks: 8**\n' +
                         '-# - Don\'t fake check, this will result in punishments!\n' +
                         '-# - Make sure you check on time!\n' +
@@ -1032,10 +1065,12 @@ async def task_start_squadron_battle_event():
     
     embed.add_field(name='0 Attendees (max 8):', value=f'', inline=True)
     embed.add_field(name='0 Reserves:', value=f'', inline=True)
-    
-    channelID = 1195674602119106652
 
-    myView = EventView(embed, client.user, hostDate, True, 8, True)
+    channelID = EVENTS_CHANNEL
+    if isDevBot:
+        channelID = 1292920931479715885
+
+    myView = EventView(embed, client.user, hostDate, True, 8, True, claimable=True)
     myView.message = await client.get_channel(channelID).send('<@&1338270607220932639>', embed=embed, view=myView)
     if not isDevBot:
         await Writedata("OngoingEvents", f'{myView.message.channel.id}-{myView.message.id}', int(hostDate.timestamp()))

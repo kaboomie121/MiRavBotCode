@@ -15,5 +15,7 @@
     "communityHostRoleId" : 1252184328687849515,
 
     "DBChannelId": 1357823210422534305,
-    "loggingChannelId": 1483868456196767745
+    "loggingChannelId": 1483868456196767745,
+
+    "eventChannelID": 1195674602119106652
 }
